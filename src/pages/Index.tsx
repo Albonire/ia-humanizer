@@ -134,14 +134,14 @@ const Index = () => {
       addToLog(`Proceso completado. Detección de IA: ${aiDetection.confidence}%`);
       
       if (aiDetection.isAI && aiDetection.confidence > 70) {
-        addToLog("⚠️ Texto todavía detectado como IA. Se recomienda repetir el proceso.");
+        addToLog("Texto todavía detectado como IA. Se recomienda repetir el proceso.");
         toast({
           title: "Advertencia",
           description: "El texto aún se detecta como IA. Considera ejecutar el proceso nuevamente.",
           variant: "destructive"
         });
       } else {
-        addToLog("✅ Texto humanizado exitosamente");
+        addToLog("Texto humanizado exitosamente");
         toast({
           title: "Éxito",
           description: "Texto humanizado correctamente"
@@ -171,26 +171,26 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-sage-100 p-4">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            🤖 Agente Humanizador de IA
+          <h1 className="text-4xl font-bold text-green-900 mb-4">
+            Agente Humanizador de IA
           </h1>
-          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+          <p className="text-lg text-green-700 max-w-3xl mx-auto">
             Transforma texto generado por IA en contenido más natural y humano usando un proceso automatizado de múltiples pasos
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Panel de entrada */}
-          <Card className="p-6">
-            <h2 className="text-2xl font-semibold mb-4">Texto Original</h2>
+          <Card className="p-6 bg-white border-green-200 shadow-lg">
+            <h2 className="text-2xl font-semibold mb-4 text-green-800">Texto Original</h2>
             <Textarea
               placeholder="Pega aquí el texto generado por IA que quieres humanizar..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              className="min-h-[300px] mb-4"
+              className="min-h-[300px] mb-4 border-green-300 focus:border-green-500 focus:ring-green-500"
               disabled={isProcessing}
             />
             
@@ -198,29 +198,30 @@ const Index = () => {
               <Button 
                 onClick={startHumanizationProcess}
                 disabled={isProcessing || !inputText.trim()}
-                className="flex-1"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
               >
-                {isProcessing ? "Procesando..." : "🚀 Iniciar Humanización"}
+                {isProcessing ? "Procesando..." : "Iniciar Humanización"}
               </Button>
               
               <Button 
                 variant="outline"
                 onClick={resetProcess}
                 disabled={isProcessing}
+                className="border-green-300 text-green-700 hover:bg-green-50"
               >
-                🔄 Limpiar
+                Limpiar
               </Button>
             </div>
           </Card>
 
           {/* Panel de resultado */}
-          <Card className="p-6">
-            <h2 className="text-2xl font-semibold mb-4">Resultado Humanizado</h2>
+          <Card className="p-6 bg-white border-green-200 shadow-lg">
+            <h2 className="text-2xl font-semibold mb-4 text-green-800">Resultado Humanizado</h2>
             
             {finalResult ? (
               <ResultDisplay result={finalResult} />
             ) : (
-              <div className="min-h-[300px] flex items-center justify-center text-gray-500 border-2 border-dashed border-gray-300 rounded-lg">
+              <div className="min-h-[300px] flex items-center justify-center text-green-600 border-2 border-dashed border-green-300 rounded-lg bg-green-25">
                 El texto humanizado aparecerá aquí
               </div>
             )}
@@ -240,11 +241,11 @@ const Index = () => {
 
         {/* Log del proceso */}
         {processLog.length > 0 && (
-          <Card className="mt-6 p-6">
-            <h3 className="text-xl font-semibold mb-4">📋 Registro del Proceso</h3>
-            <div className="bg-gray-50 rounded-lg p-4 max-h-60 overflow-y-auto">
+          <Card className="mt-6 p-6 bg-white border-green-200 shadow-lg">
+            <h3 className="text-xl font-semibold mb-4 text-green-800">Registro del Proceso</h3>
+            <div className="bg-green-50 rounded-lg p-4 max-h-60 overflow-y-auto border border-green-200">
               {processLog.map((log, index) => (
-                <div key={index} className="text-sm text-gray-700 mb-1">
+                <div key={index} className="text-sm text-green-700 mb-1 font-mono">
                   {log}
                 </div>
               ))}
@@ -253,8 +254,8 @@ const Index = () => {
         )}
 
         {/* Información sobre el proceso */}
-        <Alert className="mt-6">
-          <AlertDescription>
+        <Alert className="mt-6 border-green-300 bg-green-50">
+          <AlertDescription className="text-green-800">
             <strong>Nota:</strong> Esta es una versión de demostración que simula el proceso de humanización. 
             En la versión completa, se integrarían APIs reales de traducción, parafraseo y detección de IA para obtener resultados reales.
           </AlertDescription>

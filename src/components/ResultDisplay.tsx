@@ -53,10 +53,10 @@ const ResultDisplay = ({ result }: ResultDisplayProps) => {
       <Textarea
         value={result}
         readOnly
-        className="min-h-[300px] bg-green-50 border-green-200"
+        className="min-h-[300px] bg-green-50 border-green-200 text-green-900"
       />
       
-      <div className="flex justify-between items-center text-sm text-gray-600">
+      <div className="flex justify-between items-center text-sm text-green-700">
         <div>
           <span className="font-medium">{wordCount}</span> palabras • 
           <span className="font-medium ml-1">{charCount}</span> caracteres
@@ -67,17 +67,20 @@ const ResultDisplay = ({ result }: ResultDisplayProps) => {
             variant="outline"
             size="sm"
             onClick={copyToClipboard}
-            className={isCopied ? "bg-green-50 text-green-700" : ""}
+            className={`border-green-300 text-green-700 hover:bg-green-50 ${
+              isCopied ? "bg-green-100 text-green-800" : ""
+            }`}
           >
-            {isCopied ? "✓ Copiado" : "📋 Copiar"}
+            {isCopied ? "✓ Copiado" : "Copiar"}
           </Button>
           
           <Button
             variant="outline"
             size="sm"
             onClick={downloadText}
+            className="border-green-300 text-green-700 hover:bg-green-50"
           >
-            💾 Descargar
+            Descargar
           </Button>
         </div>
       </div>
