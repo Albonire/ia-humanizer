@@ -49,38 +49,66 @@ const ResultDisplay = ({ result }: ResultDisplayProps) => {
   const charCount = result.length;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Textarea
         value={result}
         readOnly
-        className="min-h-[300px] bg-green-50 border-green-200 text-green-900"
+        className="min-h-[320px] bg-gradient-to-br from-emerald-50/80 to-teal-50/80 border-emerald-200/50 text-slate-700 resize-none leading-relaxed rounded-xl focus:ring-0 focus:border-emerald-200"
       />
       
-      <div className="flex justify-between items-center text-sm text-green-700">
-        <div>
-          <span className="font-medium">{wordCount}</span> palabras • 
-          <span className="font-medium ml-1">{charCount}</span> caracteres
+      {/* Stats and Actions */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 p-4 bg-slate-50/50 rounded-xl border border-slate-200/50">
+        <div className="flex items-center gap-6 text-sm text-slate-600">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full"></div>
+            <span className="font-medium text-slate-700">{wordCount}</span>
+            <span>palabras</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-teal-500 rounded-full"></div>
+            <span className="font-medium text-slate-700">{charCount}</span>
+            <span>caracteres</span>
+          </div>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <Button
             variant="outline"
             size="sm"
             onClick={copyToClipboard}
-            className={`border-green-300 text-green-700 hover:bg-green-50 ${
-              isCopied ? "bg-green-100 text-green-800" : ""
+            className={`h-10 px-6 border-slate-300 text-slate-600 hover:bg-slate-50 transition-all duration-300 rounded-lg ${
+              isCopied ? "bg-emerald-50 border-emerald-300 text-emerald-700" : ""
             }`}
           >
-            {isCopied ? "✓ Copiado" : "Copiar"}
+            {isCopied ? (
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+                Copiado
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                Copiar
+              </div>
+            )}
           </Button>
           
           <Button
             variant="outline"
             size="sm"
             onClick={downloadText}
-            className="border-green-300 text-green-700 hover:bg-green-50"
+            className="h-10 px-6 border-slate-300 text-slate-600 hover:bg-slate-50 transition-all duration-300 rounded-lg"
           >
-            Descargar
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Descargar
+            </div>
           </Button>
         </div>
       </div>

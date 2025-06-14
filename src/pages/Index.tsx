@@ -35,11 +35,9 @@ const Index = () => {
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   const translateText = async (text: string, fromLang: string, toLang: string): Promise<string> => {
-    // Simulación de traducción - en producción usarías una API real
     addToLog(`Traduciendo de ${fromLang} a ${toLang}`);
     await delay(1500);
     
-    // Para demostración, devolvemos el texto con un indicador
     if (toLang === 'en') {
       return `[TRANSLATED TO EN] ${text}`;
     } else {
@@ -62,7 +60,6 @@ const Index = () => {
   const removeFormatting = async (text: string): Promise<string> => {
     addToLog("Eliminando formato del texto");
     await delay(800);
-    // Simulamos la eliminación de formato
     return text.replace(/\[.*?\]/g, '').trim();
   };
 
@@ -75,7 +72,6 @@ const Index = () => {
   const detectAI = async (text: string): Promise<{ isAI: boolean; confidence: number }> => {
     addToLog("Detectando contenido de IA");
     await delay(1000);
-    // Simulación de detección - en producción usarías APIs reales
     const confidence = Math.random() * 100;
     return {
       isAI: confidence > 50,
@@ -101,35 +97,27 @@ const Index = () => {
     try {
       let currentText = inputText;
       
-      // Paso 1: Traducir a inglés
       setCurrentStep(1);
       currentText = await translateText(currentText, 'es', 'en');
       
-      // Paso 2: Mejorar escritura
       setCurrentStep(2);
       currentText = await improveWriting(currentText);
       
-      // Paso 3: Parafrasear
       setCurrentStep(3);
       currentText = await paraphraseText(currentText);
       
-      // Paso 4: Eliminar formato
       setCurrentStep(4);
       currentText = await removeFormatting(currentText);
       
-      // Paso 5: Humanizar
       setCurrentStep(5);
       currentText = await humanizeText(currentText);
       
-      // Paso 6: Traducir de vuelta al español
       setCurrentStep(6);
       currentText = await translateText(currentText, 'en', 'es');
       
-      // Paso 7: Detectar IA
       setCurrentStep(7);
       const aiDetection = await detectAI(currentText);
       
-      // Paso 8: Verificación final
       setCurrentStep(8);
       addToLog(`Proceso completado. Detección de IA: ${aiDetection.confidence}%`);
       
@@ -171,66 +159,94 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-sage-100 p-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-green-900 mb-4">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50 to-emerald-50 relative overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-grid-pattern opacity-[0.02]"></div>
+      
+      <div className="relative max-w-7xl mx-auto px-6 py-12">
+        {/* Header Section */}
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl mb-8 shadow-lg shadow-emerald-200">
+            <div className="text-3xl text-white font-bold">AI</div>
+          </div>
+          
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-slate-800 via-emerald-800 to-teal-700 bg-clip-text text-transparent mb-6 leading-tight">
             Agente Humanizador de IA
           </h1>
-          <p className="text-lg text-green-700 max-w-3xl mx-auto">
-            Transforma texto generado por IA en contenido más natural y humano usando un proceso automatizado de múltiples pasos
+          
+          <p className="text-xl text-slate-600 max-w-4xl mx-auto leading-relaxed">
+            Transforma texto generado por IA en contenido más natural y humano usando un proceso automatizado de múltiples pasos con tecnología avanzada
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Panel de entrada */}
-          <Card className="p-6 bg-white border-green-200 shadow-lg">
-            <h2 className="text-2xl font-semibold mb-4 text-green-800">Texto Original</h2>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-12">
+          {/* Input Panel */}
+          <Card className="group p-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-500 rounded-2xl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+              <h2 className="text-2xl font-semibold text-slate-800">Texto Original</h2>
+            </div>
+            
             <Textarea
-              placeholder="Pega aquí el texto generado por IA que quieres humanizar..."
+              placeholder="Ingresa aquí el texto generado por IA que deseas humanizar..."
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              className="min-h-[300px] mb-4 border-green-300 focus:border-green-500 focus:ring-green-500"
+              className="min-h-[320px] mb-6 border-slate-200 bg-slate-50/50 focus:border-emerald-400 focus:ring-emerald-400/20 focus:ring-4 transition-all duration-300 resize-none text-slate-700 leading-relaxed rounded-xl"
               disabled={isProcessing}
             />
             
-            <div className="flex gap-3">
+            <div className="flex gap-4">
               <Button 
                 onClick={startHumanizationProcess}
                 disabled={isProcessing || !inputText.trim()}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                className="flex-1 h-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-medium shadow-lg shadow-emerald-200 hover:shadow-xl hover:shadow-emerald-300 transition-all duration-300 rounded-xl"
               >
-                {isProcessing ? "Procesando..." : "Iniciar Humanización"}
+                {isProcessing ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Procesando...
+                  </div>
+                ) : (
+                  "Iniciar Humanización"
+                )}
               </Button>
               
               <Button 
                 variant="outline"
                 onClick={resetProcess}
                 disabled={isProcessing}
-                className="border-green-300 text-green-700 hover:bg-green-50"
+                className="px-6 h-12 border-slate-300 text-slate-600 hover:bg-slate-50 hover:border-slate-400 transition-all duration-300 rounded-xl"
               >
                 Limpiar
               </Button>
             </div>
           </Card>
 
-          {/* Panel de resultado */}
-          <Card className="p-6 bg-white border-green-200 shadow-lg">
-            <h2 className="text-2xl font-semibold mb-4 text-green-800">Resultado Humanizado</h2>
+          {/* Output Panel */}
+          <Card className="group p-8 bg-white/80 backdrop-blur-sm border-0 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:shadow-slate-200/60 transition-all duration-500 rounded-2xl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-3 h-3 bg-teal-500 rounded-full"></div>
+              <h2 className="text-2xl font-semibold text-slate-800">Resultado Humanizado</h2>
+            </div>
             
             {finalResult ? (
               <ResultDisplay result={finalResult} />
             ) : (
-              <div className="min-h-[300px] flex items-center justify-center text-green-600 border-2 border-dashed border-green-300 rounded-lg bg-green-25">
-                El texto humanizado aparecerá aquí
+              <div className="min-h-[320px] flex flex-col items-center justify-center text-slate-500 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/30 transition-all duration-300">
+                <div className="w-16 h-16 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center mb-4">
+                  <div className="text-2xl text-slate-400">📝</div>
+                </div>
+                <p className="text-lg font-medium">El texto humanizado aparecerá aquí</p>
+                <p className="text-sm mt-1">Inicia el proceso para ver los resultados</p>
               </div>
             )}
           </Card>
         </div>
 
-        {/* Progreso del proceso */}
+        {/* Progress Section */}
         {isProcessing && (
-          <div className="mt-6">
+          <div className="mb-12 animate-fade-in">
             <ProcessProgress 
               steps={steps}
               currentStep={currentStep}
@@ -239,13 +255,17 @@ const Index = () => {
           </div>
         )}
 
-        {/* Log del proceso */}
+        {/* Process Log */}
         {processLog.length > 0 && (
-          <Card className="mt-6 p-6 bg-white border-green-200 shadow-lg">
-            <h3 className="text-xl font-semibold mb-4 text-green-800">Registro del Proceso</h3>
-            <div className="bg-green-50 rounded-lg p-4 max-h-60 overflow-y-auto border border-green-200">
+          <Card className="p-8 bg-white/60 backdrop-blur-sm border-0 shadow-xl shadow-slate-200/50 rounded-2xl mb-8">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-3 h-3 bg-slate-500 rounded-full"></div>
+              <h3 className="text-xl font-semibold text-slate-800">Registro del Proceso</h3>
+            </div>
+            
+            <div className="bg-slate-50/80 rounded-xl p-6 max-h-64 overflow-y-auto border border-slate-200/50">
               {processLog.map((log, index) => (
-                <div key={index} className="text-sm text-green-700 mb-1 font-mono">
+                <div key={index} className="text-sm text-slate-600 mb-2 font-mono leading-relaxed">
                   {log}
                 </div>
               ))}
@@ -253,10 +273,10 @@ const Index = () => {
           </Card>
         )}
 
-        {/* Información sobre el proceso */}
-        <Alert className="mt-6 border-green-300 bg-green-50">
-          <AlertDescription className="text-green-800">
-            <strong>Nota:</strong> Esta es una versión de demostración que simula el proceso de humanización. 
+        {/* Info Alert */}
+        <Alert className="border-0 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-lg rounded-2xl">
+          <AlertDescription className="text-slate-700 leading-relaxed">
+            <strong className="text-slate-800">Nota:</strong> Esta es una versión de demostración que simula el proceso de humanización. 
             En la versión completa, se integrarían APIs reales de traducción, parafraseo y detección de IA para obtener resultados reales.
           </AlertDescription>
         </Alert>
