@@ -61,12 +61,22 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// Custom colors
+				'primary-custom': 'var(--primary-custom)',
+				'secondary-custom': 'var(--secondary-custom)',
+				'background-custom': 'var(--background-custom)',
+				'text-title': 'var(--text-title)',
+				'text-paragraph': 'var(--text-paragraph)',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
+			},
+			fontFamily: {
+				styrene: ['Styrene Display', 'sans-serif'],
+				tiempos: ['Tiempos', 'serif'],
 			},
 			keyframes: {
 				'accordion-down': {
