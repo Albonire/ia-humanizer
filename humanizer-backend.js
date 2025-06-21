@@ -1,13 +1,16 @@
   import express from "express";
-  import cors from "cors";
-  import axios from "axios";
+import cors from "cors";
+import axios from "axios";
+import dotenv from "dotenv";
 
-  const app = express();
-  app.use(cors());
-  app.use(express.json());
+dotenv.config();
 
-  // CRÍTICO: La API Key se lee desde las variables de entorno, no está en el código.
-const OPENROUTER_API_KEY = "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";
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+// CRÍTICO: La API Key se lee desde las variables de entorno.
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 // La URL correcta y genérica para la API de OpenRouter
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_URL = OPENROUTER_API_URL;
@@ -15,31 +18,57 @@ const OPENROUTER_URL = OPENROUTER_API_URL;
 // El modelo específico que quieres usar
 const OPENROUTER_MODEL = "deepseek/deepseek-r1-0528:free";
 
+if (!OPENROUTER_API_KEY) {
+  console.error("Error: La variable de entorno OPENROUTER_API_KEY no está definida.");
+  process.exit(1);
+}
 
-  const HUMANIZATION_PROMPT = (text) => ` ROLE: Experto en reescritura textual indetectable
-OBJECTIVE: Reescribir el texto aplicando humanización
-LANGUAGE: Mantener mismo idioma que entrada
-FORMATO: Solo texto reescrito sin elementos adicionales
 
-REGLAS ABSOLUTAS:
-1. NO añadir explicaciones/comentarios
-2. NO incluir listas/viñetas
-3. NO usar encabezados/formatos
-4. NO añadir citas/referencias
-5. NO incluir metadatos
+  const HUMANIZATION_PROMPT = (text) => ` ROLE: Strict word processor  
+OBJECTIVE: Rewrite text applying humanization WITHOUT adding elements  
+LANGUAGE: Keep original language  
+OUTPUT FORMAT: Only rewritten text without any additions  
 
-TÉCNICAS:
-- Variación sintáctica
-- Conectores naturales
-- Imperfecciones controladas
-- Longitud ±15%
-- Conservar tono original
+**ABSOLUTE RULES (NON-NEGOTIABLE)**:  
+1. ❌ DO NOT add explanations, comments, or analysis  
+2. ❌ DO NOT use formats:  
+   - Headings (##, **)  
+   - Lists (1., 2., -)  
+   - Quotes (>)  
+   - Separate blocks  
+3. ❌ DO NOT include metadata or additional text  
+4. ✅ STRUCTURE:  
+   - Same number of paragraphs as the original entry  
+   - Same logical sequence  
+   - ±15% original words  
+5. ✅ CONTENT:  
+   - Retain all original data  
+   - Maintain tone and style  
 
-EJEMPLO:
-Input: "La tecnología mejora la productividad"
-Output: "La productividad se ve reforzada por avances tecnológicos"
+**ALLOWED TECHNIQUES**:
+- Syntactic variation (mixing simple/compound sentences)  
+- Natural connectors (“therefore,” “likewise”)  
+- Strategic lexical substitution  
+- Controlled explanatory gerunds  
 
-REWRITE THIS TEXT:
+**DEMONSTRATIVE EXAMPLE (FEW-SHOT)**:  
+[Input]  
+“Climate change affects ecosystems. We must act now.”  
+
+[VALID Output]  
+“Ecosystems suffer climate impacts, making it urgent to take immediate action.”  
+
+[INVALID output]  
+*Improved text:  
+- Impact on ecosystems  
+- Need for action  
+Explanation: I have simplified...*  
+
+**FINAL INSTRUCTION**:  
+REWRITE THE TEXT DIRECTLY FOLLOWING THE RULES.  
+DO NOT ADD PREAMBLES OR COMMENTS.  
+ONLY THE REWRITTEN TEXT:
+
   '
 
   ${text}`;
@@ -67,7 +96,7 @@ REWRITE THIS TEXT:
       const generatedSet = new Set(generatedWords);
       const intersection = new Set([...originalSet].filter(x => generatedSet.has(x)));
       const similarity = intersection.size / Math.max(originalSet.size, generatedSet.size);
-      const valid = similarity > 0.6;
+      const valid = similarity > 0.50;
       if (!valid) console.warn(`[VALIDACIÓN] Similitud temática: ${similarity.toFixed(2)}`);
       return valid;
     },
@@ -75,7 +104,7 @@ REWRITE THIS TEXT:
     // Permite longitud entre 80% y 120% del original
     validLength: (original, generated) => {
       const ratio = generated.length / original.length;
-      const valid = ratio > 0.8 && ratio < 1.2;
+      const valid = ratio > 0.9 && ratio < 1.2;
       if (!valid) console.warn(`[VALIDACIÓN] Longitud: original=${original.length}, generado=${generated.length}, ratio=${ratio.toFixed(2)}`);
       return valid;
     },
@@ -116,30 +145,15 @@ REWRITE THIS TEXT:
     };
   };
 
-  // Función para validar la API key
-  const validateApiKey = (apiKey) => {
-    if (!apiKey) return false;
-    if (!apiKey.startsWith('hf_')) return false;
-    return true;
-  };
 
-  function getHumanizationPrompt(text, lang = "en") {
-    if (lang === "en") {
-      return `Rewrite the following text in English to sound more human, natural, and fluent, keeping the original meaning. Do not add new information or change the topic.\n\n${text}`;
-    } else {
-      return `Reescribe el siguiente texto en español para que suene más humano, natural y fluido, manteniendo el significado original. No añadas información nueva ni cambies el tema.\n\n${text}`;
-    }
-  }
-
-  async function humanizeWithOpenRouter(text, lang = "en") {
-    const prompt = getHumanizationPrompt(text, lang);
+  async function humanizeWithOpenRouter(text) {
+    const prompt = HUMANIZATION_PROMPT(text);
 
     const response = await axios.post(
       OPENROUTER_URL,
       {
         model: OPENROUTER_MODEL,
         messages: [
-          { role: lang === "en" ? "system" : "system", content: lang === "en" ? "You are an expert human writer." : "Eres un experto redactor humano." },
           { role: "user", content: prompt }
         ],
         max_tokens: 1024,
@@ -166,9 +180,9 @@ REWRITE THIS TEXT:
   }
 
   app.post("/api/humanize", async (req, res) => {
-    const { text, lang = "en" } = req.body;
+    const { text } = req.body;
     try {
-      const result = await humanizeWithOpenRouter(text, lang);
+      const result = await humanizeWithOpenRouter(text);
       const validation = validateOutput(text, result);
       if (!validation.isValid) {
         return res.status(422).json({ error: "La salida no cumple con los criterios de validación", validation, result });
