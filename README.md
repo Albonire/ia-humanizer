@@ -1,58 +1,10 @@
-# Welcome to your Lovable project
+# ia-humanizer-orchestrator
 
-## Project info
+## Descripción del proyecto
 
-**URL**: https://lovable.dev/projects/b75d655a-c1a9-4781-b27a-20687b1cf0fc
+Este proyecto es un orquestador para la humanización de textos generados por inteligencia artificial. Permite transformar textos generados por IA en versiones más naturales y humanas, integrando varios pasos como traducción, mejora de escritura, parafraseo, eliminación de formato, humanización, traducción de vuelta y detección de IA.
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/b75d655a-c1a9-4781-b27a-20687b1cf0fc) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
+## Tecnologías utilizadas
 
 - Vite
 - TypeScript
@@ -60,14 +12,36 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## How can I deploy this project?
+## ¿Cómo editar el código?
 
-Simply open [Lovable](https://lovable.dev/projects/b75d655a-c1a9-4781-b27a-20687b1cf0fc) and click on Share -> Publish.
+Puedes trabajar localmente usando tu IDE favorito. Solo necesitas tener Node.js y npm instalados.
 
-## Can I connect a custom domain to my Lovable project?
+Sigue estos pasos:
 
-Yes, you can!
+```sh
+# 1. Clona el repositorio usando la URL de tu proyecto.
+git clone <YOUR_GIT_URL>
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+# 2. Entra en el directorio del proyecto.
+cd <YOUR_PROJECT_NAME>
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+# 3. Instala las dependencias necesarias.
+npm i
+
+# 4. Inicia el servidor de desarrollo con recarga automática y vista previa instantánea.
+npm run dev
+```
+
+También puedes editar archivos directamente en GitHub o usar GitHub Codespaces para trabajar en la nube.
+
+## ¿Cómo desplegar este proyecto?
+
+Puedes desplegar el proyecto en cualquier plataforma compatible con Node.js. Solo asegúrate de instalar las dependencias y ejecutar el comando de build o start según tu entorno.
+
+## Contribución
+
+Si deseas contribuir, por favor abre un issue o pull request con tus sugerencias o mejoras.
+
+---
+
+© 2024. Proyecto desarrollado para la humanización de textos generados por IA.
