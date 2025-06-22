@@ -104,7 +104,7 @@ ONLY THE REWRITTEN TEXT:
     // Permite longitud entre 80% y 120% del original
     validLength: (original, generated) => {
       const ratio = generated.length / original.length;
-      const valid = ratio > 0.9 && ratio < 1.2;
+      const valid = ratio > 0.8 && ratio < 1.2;
       if (!valid) console.warn(`[VALIDACIÓN] Longitud: original=${original.length}, generado=${generated.length}, ratio=${ratio.toFixed(2)}`);
       return valid;
     },
