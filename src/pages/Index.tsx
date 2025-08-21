@@ -225,7 +225,7 @@ const Index = () => {
         body: JSON.stringify({
           key: SAPLING_API_KEY, 
           text: text,
-          sent_scores: true // Para obtener los scores por sentencia
+          sent_scores: true 
         }),
       });
       if (!response.ok) {
@@ -240,7 +240,6 @@ const Index = () => {
         throw new Error(errorMessage);
       }
       const data = await response.json();
-      // Asumiendo que la API devuelve una propiedad 'score' (general) y 'sentence_scores'
       const isAI = data.score > 0.5; // Si el score general es > 0.5, consideramos que es IA
       const confidence = data.score ? (data.score * 100) : 0; // El score es de 0 a 1, lo convertimos a %
 
@@ -257,15 +256,13 @@ const Index = () => {
         description: `No se pudo detectar el contenido de IA. Detalles: ${(error as Error).message}`,
         variant: "destructive"
       });
-      // Retorna un valor por defecto en caso de error para no detener el proceso
       return { isAI: true, confidence: 100 }; 
     }
-    // --- FIN DE INTEGRACIÓN API REAL ---
   };
 
   const removeAIDetectionSmodin = async (text: string, language: string = "es"): Promise<string> => {
     addToLog("Limpiando rastros de IA con Smodin (AI Content Detection Remover)");
-    const RAPIDAPI_KEY = "4cc1e4b4camshcb8e9b0028cb710p1e18f2jsnde3df39a0a8e"; // Clave API proporcionada por el usuario
+    const RAPIDAPI_KEY = "4cc1e4b4camshcb8e9b0028cb710p1e18f2jsnde3df39a0a8e"; 
     const API_ENDPOINT = "https://ai-content-detection-remover.p.rapidapi.com/recreate";
     try {
       const response = await fetch(API_ENDPOINT, {
