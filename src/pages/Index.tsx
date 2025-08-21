@@ -86,7 +86,7 @@ const Index = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${TEXTCORTEX_API_KEY}` // La documentación indica Bearer Auth
+          'Authorization': `Bearer ${TEXTCORTEX_API_KEY}` 
         },
         body: JSON.stringify({
           text: text, // Parámetro requerido
