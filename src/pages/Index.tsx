@@ -89,7 +89,7 @@ const Index = () => {
           'Authorization': `Bearer ${TEXTCORTEX_API_KEY}` 
         },
         body: JSON.stringify({
-          text: text, // Parámetro requerido
+          text: text, 
           mode: "style_fluent" // <-- **Parámetro `mode` requerido añadido**
         }),
       });
