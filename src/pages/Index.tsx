@@ -152,7 +152,7 @@ const Index = () => {
         }),
       });
       if (!response.ok) {
-        // Intenta leer como JSON, si falla, lee como texto
+
         const errorBody = await response.text();
         let errorMessage = `HTTP error! status: ${response.status}`;
         try {
@@ -164,7 +164,6 @@ const Index = () => {
         throw new Error(errorMessage);
       }
       
-      // La API devuelve directamente el texto parafraseado como texto plano.
       const paraphrasedText = await response.text(); 
       if (!paraphrasedText) {
         throw new Error("La respuesta de la API de parafraseo no contiene el texto esperado.");
