@@ -147,7 +147,7 @@ const Index = () => {
           'x-rapidapi-key': RAPIDAPI_KEY
         },
         body: JSON.stringify({
-          from: "en", // El texto ya está en inglés en este punto del proceso
+          from: "en", 
           text: text
         }),
       });
