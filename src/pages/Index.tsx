@@ -72,7 +72,6 @@ const Index = () => {
       });
       return text; // Retorna el texto original en caso de error
     }
-    // --- FIN DE INTEGRACIÓN API REAL ---
   };
 
   const improveWriting = async (text: string): Promise<string> => {
