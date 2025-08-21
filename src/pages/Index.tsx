@@ -177,9 +177,8 @@ const Index = () => {
         description: `No se pudo parafrasear el texto. Detalles: ${(error as Error).message}`,
         variant: "destructive"
       });
-      return text; // Retorna el texto original en caso de error
+      return text; 
     }
-    // --- FIN DE INTEGRACIÓN API REAL ---
   };
 
   const removeFormatting = async (text: string): Promise<string> => {
