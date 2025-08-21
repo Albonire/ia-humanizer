@@ -187,7 +187,6 @@ const Index = () => {
     addToLog("Formato eliminado exitosamente.");
     await delay(500); // Mantener un pequeño delay para simular el procesamiento real
     return cleanedText;
-    // --- FIN DE INTEGRACIÓN REAL ---
   };
 
   const humanizeText = async (text: string, lang: string = "en"): Promise<string> => {
