@@ -183,8 +183,6 @@ const Index = () => {
 
   const removeFormatting = async (text: string): Promise<string> => {
     addToLog("Eliminando formato del texto (usando out-of-character)");
-    // --- INICIO DE INTEGRACIÓN REAL (out-of-character) ---
-    // Esta librería elimina caracteres Unicode invisibles o extraños.
     const cleanedText = ooc.replace(text); 
     addToLog("Formato eliminado exitosamente.");
     await delay(500); // Mantener un pequeño delay para simular el procesamiento real
