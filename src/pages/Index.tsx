@@ -134,7 +134,7 @@ const Index = () => {
   const paraphraseText = async (text: string): Promise<string> => {
     addToLog("Parafraseando el texto (usando RapidAPI Paraphrasing API)");
 
-    const RAPIDAPI_KEY = "4cc1e4b4camshcb8e9b0028cb710p1e18f2jsnde3df39a0a8e"; // Clave API proporcionada por el usuario
+    const RAPIDAPI_KEY = "4cc1e4b4camshcb8e9b0028cb710p1e18f2jsnde3df39a0a8e"; 
     const RAPIDAPI_HOST = "paraphrasing-and-rewriter-api.p.rapidapi.com";
     const API_ENDPOINT = `https://${RAPIDAPI_HOST}/rewrite-light`;
 
