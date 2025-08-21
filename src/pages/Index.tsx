@@ -129,15 +129,10 @@ const Index = () => {
       });
       return text; // Retorna el texto original en caso de error
     }
-    // --- FIN DE INTEGRACIÓN API REAL ---
   };
 
   const paraphraseText = async (text: string): Promise<string> => {
     addToLog("Parafraseando el texto (usando RapidAPI Paraphrasing API)");
-    // --- INICIO DE INTEGRACIÓN API REAL (RapidAPI Paraphrasing API) ---
-    // Clave API proporcionada por el usuario.
-    // Para un proyecto universitario de costo cero, puedes usar los niveles gratuitos de estas APIs.
-    // Si usas un backend, la llamada fetch iría a tu backend, no directamente a la API externa.
 
     const RAPIDAPI_KEY = "4cc1e4b4camshcb8e9b0028cb710p1e18f2jsnde3df39a0a8e"; // Clave API proporcionada por el usuario
     const RAPIDAPI_HOST = "paraphrasing-and-rewriter-api.p.rapidapi.com";
