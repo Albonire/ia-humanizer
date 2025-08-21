@@ -70,16 +70,13 @@ const Index = () => {
         description: `No se pudo traducir el texto a ${toLang}. Usando texto original.`,
         variant: "destructive"
       });
-      return text; // Retorna el texto original en caso de error
+      return text; 
     }
   };
 
   const improveWriting = async (text: string): Promise<string> => {
     addToLog("Mejorando la escritura del texto (usando TextCortex API)");
-    // --- INICIO DE INTEGRACIÓN API REAL (TextCortex API) ---
-    // Clave API proporcionada por el usuario.
-    // Para un proyecto universitario de costo cero, puedes usar los niveles gratuitos de estas APIs.
-    // Si usas un backend, la llamada fetch iría a tu backend, no directamente a la API externa.
+
 
     const TEXTCORTEX_API_KEY = "gAAAAABoVEFAHlLQNNvPQ42q23PhL1A4vUP6glSFbDqGM8_s92qNx70K3N_B8RrA36jhAFG1zSQasfeo62-Uk3VRl4xixKIDpZo_3c0_Osz9TmpORb2dggR4AZtQ18V-Nu4v7KbGUdvC80iwwydEhDYmkJg99vTY_FBUBDdBQnXG_LwkwmWnGxY="; // Clave API proporcionada por el usuario
     const API_ENDPOINT = "https://api.textcortex.com/v1/texts/rewritings";
