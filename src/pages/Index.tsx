@@ -78,7 +78,7 @@ const Index = () => {
     addToLog("Mejorando la escritura del texto (usando TextCortex API)");
 
 
-    const TEXTCORTEX_API_KEY = "gAAAAABoVEFAHlLQNNvPQ42q23PhL1A4vUP6glSFbDqGM8_s92qNx70K3N_B8RrA36jhAFG1zSQasfeo62-Uk3VRl4xixKIDpZo_3c0_Osz9TmpORb2dggR4AZtQ18V-Nu4v7KbGUdvC80iwwydEhDYmkJg99vTY_FBUBDdBQnXG_LwkwmWnGxY="; // Clave API proporcionada por el usuario
+    const TEXTCORTEX_API_KEY = "gAAAAABoVEFAHlLQNNvPQ42q23PhL1A4vUP6glSFbDqGM8_s92qNx70K3N_B8RrA36jhAFG1zSQasfeo62-Uk3VRl4xixKIDpZo_3c0_Osz9TmpORb2dggR4AZtQ18V-Nu4v7KbGUdvC80iwwydEhDYmkJg99vTY_FBUBDdBQnXG_LwkwmWnGxY=";
     const API_ENDPOINT = "https://api.textcortex.com/v1/texts/rewritings";
 
     try {
