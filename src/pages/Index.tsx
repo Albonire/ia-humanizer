@@ -213,8 +213,7 @@ const Index = () => {
 
   const detectAI = async (text: string): Promise<{ isAI: boolean; confidence: number }> => {
     addToLog("Detectando contenido de IA (usando Sapling.ai API)");
-    const SAPLING_API_KEY = "BILI5BB964HAHHZ4TFGJF6GJP5RQXFH5"; // Reemplaza con tu clave API de Sapling
-    // Endpoint correcto para la detección de IA según la documentación de Sapling.ai:
+    const SAPLING_API_KEY = "BILI5BB964HAHHZ4TFGJF6GJP5RQXFH5"; 
     const API_ENDPOINT = "https://api.sapling.ai/api/v1/aidetect";
 
     try {
