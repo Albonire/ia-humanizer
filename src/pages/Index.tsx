@@ -221,13 +221,10 @@ const Index = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // La documentación de Sapling indica que la clave API va en el body o query param
-          // No suele ir en el Authorization header para este tipo de API.
         },
         body: JSON.stringify({
-          key: SAPLING_API_KEY, // La clave API va en el body
+          key: SAPLING_API_KEY, 
           text: text,
-          // Añadir otros parámetros que la API de Sapling.ai pueda requerir.
           sent_scores: true // Para obtener los scores por sentencia
         }),
       });
