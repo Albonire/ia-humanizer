@@ -107,10 +107,20 @@ const Index = () => {
 
   const removeFormatting = async (text: string): Promise<string> => {
     addToLog("Eliminando formato del texto (usando out-of-character)");
-    const cleanedText = ooc.replace(text); 
-    addToLog("Formato eliminado exitosamente.");
-    await delay(500); // Mantener un pequeño delay para simular el procesamiento real
-    return cleanedText;
+    try {
+      if (!text || typeof text !== 'string') {
+        addToLog("⚠️ Texto inválido para eliminar formato, usando original");
+        return text;
+      }
+      const cleanedText = ooc.replace(text) || text;
+      addToLog("Formato eliminado exitosamente.");
+      await delay(500);
+      return cleanedText;
+    } catch (error) {
+      console.error("Error eliminando formato:", error);
+      addToLog("⚠️ Error eliminando formato, usando texto original");
+      return text;
+    }
   };
 
   const humanizeText = async (text: string, lang: string = "en"): Promise<string> => {
@@ -209,51 +219,67 @@ const Index = () => {
 
     try {
       let currentText = inputText;
-      let aiDetection = { isAI: false, confidence: 0 };
 
-      // Paso 1: Traducir a inglés (Ahora local ✅)
+      // Paso 1: Traducir a inglés
       setCurrentStep(1);
+      addToLog("Traduciendo a inglés...");
       currentText = await translateText(currentText, 'es', 'en');
+      await delay(200);
 
-      // Paso 2: Humanizar con IA ✅
+      // Paso 2: Humanizar con IA
       setCurrentStep(2);
+      addToLog("Humanizando texto...");
       currentText = await humanizeText(currentText, 'en');
+      await delay(200);
 
-      // Paso 3: Limpiar rastros de IA con Smodin
+      // Paso 3: Limpiar rastros de IA
       setCurrentStep(3);
+      addToLog("Limpiando rastros de IA...");
       currentText = await removeAIDetectionSmodin(currentText);
+      await delay(200);
 
-      // Paso 4: Mejorar escritura (Ahora local ✅)
+      // Paso 4: Mejorar escritura
       setCurrentStep(4);
+      addToLog("Mejorando escritura...");
       currentText = await improveWriting(currentText);
+      await delay(200);
 
-      // Paso 5: Parafrasear (Ahora local ✅)
+      // Paso 5: Parafrasear
       setCurrentStep(5);
+      addToLog("Parafraseando...");
       currentText = await paraphraseText(currentText);
+      await delay(200);
 
       // Paso 6: Eliminar formato
       setCurrentStep(6);
+      addToLog("Eliminando formato...");
       currentText = await removeFormatting(currentText);
+      await delay(200);
 
-      // Paso 7: Parafrasear de nuevo (Ahora local ✅)
+      // Paso 7: Parafrasear de nuevo
       setCurrentStep(7);
+      addToLog("Parafraseando de nuevo...");
       currentText = await paraphraseText(currentText);
+      await delay(200);
 
-      // Paso 8: Traducir de vuelta al español (Ahora local ✅)
+      // Paso 8: Traducir de vuelta al español
       setCurrentStep(8);
+      addToLog("Traduciendo de vuelta al español...");
       currentText = await translateText(currentText, 'en', 'es');
+      await delay(200);
 
-      // Paso 9: Detectar IA (Ahora local ✅)
+      // Paso 9: Detectar IA
       setCurrentStep(9);
-      aiDetection = await detectAI(currentText);
+      addToLog("Detectando IA...");
+      const aiDetection = await detectAI(currentText);
+      await delay(200);
 
-      // Paso 10: Verificación final
       setCurrentStep(10);
-      addToLog(`✅ Proceso completado. Confianza IA: ${aiDetection.confidence.toFixed(2)}%`);
+      addToLog("¡Proceso completado!");
 
       toast({
         title: "Éxito",
-        description: "Texto humanizado correctamente con transformaciones locales y IA"
+        description: `Texto humanizado correctamente. Confianza IA: ${aiDetection.confidence.toFixed(2)}%`
       });
 
       setFinalResult(currentText);
