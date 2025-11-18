@@ -85,6 +85,9 @@ const Index = () => {
   const paraphraseText = async (text: string): Promise<string> => {
     addToLog("Parafraseando el texto (usando backend local)");
 
+  const paraphraseText = async (text: string): Promise<string> => {
+    addToLog("Parafraseando el texto (usando backend local)");
+
     try {
       const response = await fetch("http://localhost:3001/api/paraphrase", {
         method: "POST",

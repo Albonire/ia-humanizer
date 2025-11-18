@@ -5,6 +5,179 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+// ============================================================================
+// ACADEMIC TEXT TRANSFORMER - OPCIÓN 1 (Recomendado)
+// ============================================================================
+class AcademicTextTransformer {
+  constructor() {
+    this.contractions = {
+      "can't": "cannot",
+      "won't": "will not",
+      "don't": "do not",
+      "doesn't": "does not",
+      "didn't": "did not",
+      "it's": "it is",
+      "it'll": "it will",
+      "I'm": "I am",
+      "you're": "you are",
+      "we're": "we are",
+      "they're": "they are",
+      "I've": "I have",
+      "you've": "you have",
+      "we've": "we have",
+      "they've": "they have",
+      "I'll": "I will",
+      "you'll": "you will",
+      "we'll": "we will",
+      "they'll": "they will",
+      "wouldn't": "would not",
+      "couldn't": "could not",
+      "shouldn't": "should not",
+      "isn't": "is not",
+      "aren't": "are not",
+      "wasn't": "was not",
+      "weren't": "were not",
+      "haven't": "have not",
+      "hasn't": "has not"
+    };
+
+    this.academicTransitions = [
+      "Moreover,",
+      "Additionally,",
+      "Furthermore,",
+      "Hence,",
+      "Therefore,",
+      "Consequently,",
+      "Nonetheless,",
+      "Nevertheless,",
+      "In addition,",
+      "However,",
+      "In fact,",
+      "Indeed,",
+      "Rather,",
+      "Conversely,"
+    ];
+
+    this.synonymMap = {
+      "\\buse\\b": ["utilize", "employ", "leverage"],
+      "\\bhelp\\b": ["facilitate", "assist", "aid"],
+      "\\bshow\\b": ["demonstrate", "illustrate", "exhibit"],
+      "\\bmake\\b": ["produce", "generate", "create"],
+      "\\bneed\\b": ["require", "necessitate", "demand"],
+      "\\bgood\\b": ["beneficial", "advantageous", "favorable"],
+      "\\bbad\\b": ["adverse", "detrimental", "unfavorable"],
+      "\\beasy\\b": ["straightforward", "facile", "uncomplicated"],
+      "\\bhard\\b": ["challenging", "difficult", "arduous"],
+      "\\bget\\b": ["obtain", "acquire", "gain"]
+    };
+  }
+
+  expandContractions(text) {
+    let result = text;
+    for (const [contraction, expansion] of Object.entries(this.contractions)) {
+      const regex = new RegExp(`\\b${contraction.replace(/'/g, "\\'")}\\b`, "gi");
+      result = result.replace(regex, (match) => {
+        const isCapitalized = match[0] === match[0].toUpperCase();
+        return isCapitalized
+          ? expansion.charAt(0).toUpperCase() + expansion.slice(1)
+          : expansion;
+      });
+    }
+    return result;
+  }
+
+  addAcademicTransitions(text) {
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+    return sentences
+      .map((sentence, index) => {
+        if (index === 0) return sentence;
+        if (Math.random() < 0.35) {
+          const transition = this.academicTransitions[
+            Math.floor(Math.random() * this.academicTransitions.length)
+          ];
+          const trimmed = sentence.trim();
+          return transition + " " + trimmed.charAt(0).toLowerCase() + trimmed.slice(1);
+        }
+        return sentence;
+      })
+      .join(" ");
+  }
+
+  replaceSynonyms(text) {
+    let result = text;
+    for (const [pattern, synonymList] of Object.entries(this.synonymMap)) {
+      if (Math.random() < 0.25) {
+        const regex = new RegExp(pattern, "gi");
+        const synonym = synonymList[Math.floor(Math.random() * synonymList.length)];
+        result = result.replace(regex, (match) => {
+          const isCapitalized = match[0] === match[0].toUpperCase();
+          return isCapitalized
+            ? synonym.charAt(0).toUpperCase() + synonym.slice(1)
+            : synonym;
+        });
+      }
+    }
+    return result;
+  }
+
+  convertPassiveVoice(text) {
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+    return sentences
+      .map((sentence) => {
+        if (Math.random() < 0.2) {
+          const match = sentence.match(
+            /([A-Z][a-z\s]+?)\s+(created|developed|found|discovered|made|conducted|performed|studied|analyzed|examined|identified|established|determined|demonstrated|showed)\s+([a-z\s]+?)(?=[.!?])/i
+          );
+          if (match) {
+            const object = match[3].trim();
+            const verb = match[2].toLowerCase();
+            let pastParticiple = verb;
+            if (!verb.endsWith("ed")) pastParticiple = verb + "ed";
+            return `${object} was ${pastParticiple}${sentence.match(/[.!?]$/)[0]}`;
+          }
+        }
+        return sentence;
+      })
+      .join(" ");
+  }
+
+  transform(text) {
+    let result = text;
+    result = this.expandContractions(result);
+    result = this.replaceSynonyms(result);
+    result = this.addAcademicTransitions(result);
+    result = this.convertPassiveVoice(result);
+    return result.trim();
+  }
+
+  getStats(original, transformed) {
+    const originalWords = original.split(/\s+/).length;
+    const transformedWords = transformed.split(/\s+/).length;
+    const originalContractions = (original.match(
+      /\b(can't|won't|don't|isn't|aren't|it's|I'm|you're|we're|they're|I've|would|couldn't|shouldn't|haven't|hasn't)\b/gi
+    ) || []).length;
+    const transformedContractions = (transformed.match(
+      /\b(can't|won't|don't|isn't|aren't|it's|I'm|you're|we're|they're|I've|would|couldn't|shouldn't|haven't|hasn't)\b/gi
+    ) || []).length;
+
+    return {
+      wordCount: {
+        original: originalWords,
+        transformed: transformedWords,
+        diff: transformedWords - originalWords,
+        ratio: (transformedWords / originalWords).toFixed(2)
+      },
+      contractions: {
+        original: originalContractions,
+        remaining: transformedContractions,
+        expanded: originalContractions - transformedContractions
+      }
+    };
+  }
+}
+
+const academicTransformer = new AcademicTextTransformer();
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -16,7 +189,8 @@ const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_URL = OPENROUTER_API_URL;
 
 // El modelo específico que quieres usar
-const OPENROUTER_MODEL = "deepseek/deepseek-r1-0528:free";
+// Alternativas: meta-llama/llama-2-7b-chat:free, mistralai/mistral-7b-instruct:free
+const OPENROUTER_MODEL = "meta-llama/llama-2-7b-chat:free";
 
 if (!OPENROUTER_API_KEY) {
   console.error("Error: La variable de entorno OPENROUTER_API_KEY no está definida.");
@@ -149,48 +323,101 @@ ONLY THE REWRITTEN TEXT:
   async function humanizeWithOpenRouter(text) {
     const prompt = HUMANIZATION_PROMPT(text);
 
-    const response = await axios.post(
-      OPENROUTER_URL,
-      {
-        model: OPENROUTER_MODEL,
-        messages: [
-          { role: "user", content: prompt }
-        ],
-        max_tokens: 1024,
-        temperature: 0.7,
-        top_p: 0.95
-      },
-      {
-        headers: {
-          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json"
+    try {
+      console.log("📤 Enviando request a OpenRouter...");
+      console.log("🔑 API Key (primeros 30 chars):", OPENROUTER_API_KEY.substring(0, 30) + "...");
+      
+      const response = await axios.post(
+        OPENROUTER_URL,
+        {
+          model: OPENROUTER_MODEL,
+          messages: [
+            { role: "user", content: prompt }
+          ],
+          max_tokens: 1024,
+          temperature: 0.7,
+          top_p: 0.95
+        },
+        {
+          headers: {
+            "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "http://localhost:3001",
+            "X-Title": "IA Humanizer"
+          }
         }
+      );
+
+      // Log completo para depuración
+      console.log("✅ Respuesta OpenRouter recibida:", JSON.stringify(response.data, null, 2));
+
+      // Manejo robusto de respuesta
+      if (!response.data.choices || !response.data.choices[0] || !response.data.choices[0].message || !response.data.choices[0].message.content) {
+        throw new Error("Respuesta inesperada de OpenRouter: " + JSON.stringify(response.data));
       }
-    );
 
-    // Log completo para depuración
-    console.log("Respuesta OpenRouter:", JSON.stringify(response.data, null, 2));
-
-    // Manejo robusto de respuesta
-    if (!response.data.choices || !response.data.choices[0] || !response.data.choices[0].message || !response.data.choices[0].message.content) {
-      throw new Error("Respuesta inesperada de OpenRouter: " + JSON.stringify(response.data));
+      return response.data.choices[0].message.content;
+    } catch (error) {
+      console.error("❌ Error en OpenRouter:");
+      console.error("  Status:", error.response?.status);
+      console.error("  Message:", error.message);
+      console.error("  Data:", JSON.stringify(error.response?.data, null, 2));
+      throw error;
     }
-
-    return response.data.choices[0].message.content;
   }
 
   app.post("/api/humanize", async (req, res) => {
     const { text } = req.body;
+    
+    if (!text) {
+      return res.status(400).json({ error: "El texto es requerido" });
+    }
+
     try {
+      // Step 1: Humanizar con DeepSeek
+      console.log("🚀 Step 1: Humanizing with DeepSeek...");
       const result = await humanizeWithOpenRouter(text);
-      const validation = validateOutput(text, result);
+
+      // Step 2: Aplicar transformaciones académicas locales (OPCIÓN 1)
+      console.log("🚀 Step 2: Applying academic transformations...");
+      const enhancedResult = academicTransformer.transform(result);
+
+      // Step 3: Obtener estadísticas
+      console.log("🚀 Step 3: Calculating statistics...");
+      const stats = academicTransformer.getStats(result, enhancedResult);
+
+      // Step 4: Validar
+      console.log("🚀 Step 4: Validating output...");
+      const validation = validateOutput(text, enhancedResult);
       if (!validation.isValid) {
-        return res.status(422).json({ error: "La salida no cumple con los criterios de validación", validation, result });
+        console.warn("⚠️ Validation warnings:", validation);
       }
-      res.json({ result, validation });
+
+      // Step 5: Responder
+      console.log("✅ Humanization complete!");
+      res.json({
+        result: enhancedResult,
+        validation,
+        stats,
+        transformations: {
+          contractions_expanded: stats.contractions.expanded,
+          word_count_change: stats.wordCount.diff,
+          ratio: stats.wordCount.ratio
+        }
+      });
     } catch (error) {
-      console.error("Error con OpenRouter:", error.response?.data || error.message);
-      res.status(500).json({ error: "Error al procesar el texto con OpenRouter" });
+      console.error("❌ Error en /api/humanize:");
+      console.error("  Mensaje:", error.message);
+      console.error("  Status:", error.response?.status);
+      console.error("  Data:", error.response?.data);
+      
+      const status = error.response?.status || 500;
+      const message = error.response?.data?.error || error.message || "Error al procesar el texto con OpenRouter";
+      
+      res.status(status).json({ 
+        error: message,
+        details: error.response?.data
+      });
     }
   });
 
