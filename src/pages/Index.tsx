@@ -39,16 +39,16 @@ const Index = () => {
 
   const translateText = async (text: string, fromLang: string, toLang: string): Promise<string> => {
     addToLog(`Traduciendo de ${fromLang} a ${toLang} (usando backend local)`);
-    
+
     try {
       const response = await fetch("http://localhost:3001/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, fromLang, toLang }),
       });
-      
+
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      
+
       const data = await response.json();
       addToLog(`Traducción exitosa a ${toLang}.`);
       return data.result;
@@ -68,9 +68,9 @@ const Index = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
-      
+
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      
+
       const data = await response.json();
       addToLog("Escritura mejorada exitosamente.");
       await delay(300);
@@ -91,9 +91,9 @@ const Index = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
-      
+
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      
+
       const data = await response.json();
       addToLog("Parafraseo exitoso.");
       await delay(300);
@@ -154,9 +154,9 @@ const Index = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
-      
+
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      
+
       const data = await response.json();
       addToLog(`✅ Detección de IA completada: ${data.confidence.toFixed(2)}% (${data.isAI ? "Contenido IA" : "Contenido humano"})`);
       return { isAI: data.isAI, confidence: data.confidence };
@@ -169,7 +169,7 @@ const Index = () => {
 
   const removeAIDetectionSmodin = async (text: string, language: string = "es"): Promise<string> => {
     addToLog("Limpiando rastros de IA con Smodin (AI Content Detection Remover)");
-    const RAPIDAPI_KEY = "4cc1e4b4camshcb8e9b0028cb710p1e18f2jsnde3df39a0a8e"; 
+    const RAPIDAPI_KEY = "4cc1e4b4camshcb8e9b0028cb710p1e18f2jsnde3df39a0a8e";
     const API_ENDPOINT = "https://ai-content-detection-remover.p.rapidapi.com/recreate";
     try {
       const response = await fetch(API_ENDPOINT, {
@@ -393,11 +393,11 @@ const Index = () => {
         )}
 
         <footer className="text-center mt-12 flex-shrink-0">
-            <Alert className="border-none bg-transparent">
-              <AlertDescription className="text-foreground/60">
-                <strong>Nota:</strong> Esta es una herramienta de demostración. Revisa siempre los resultados.
-              </AlertDescription>
-            </Alert>
+          <Alert className="border-none bg-transparent">
+            <AlertDescription className="text-foreground/60">
+              <strong>Nota:</strong> Esta es una herramienta en desarrollo. Revisa siempre los resultados.
+            </AlertDescription>
+          </Alert>
         </footer>
 
       </div>

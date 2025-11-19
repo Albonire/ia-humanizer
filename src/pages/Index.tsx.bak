@@ -372,7 +372,7 @@ const Index = () => {
         <footer className="text-center mt-12 flex-shrink-0">
             <Alert className="border-none bg-transparent">
               <AlertDescription className="text-foreground/60">
-                <strong>Nota:</strong> Esta es una herramienta de demostración. Revisa siempre los resultados.
+                <strong>Nota:</strong> Esta es una herramienta en desarrollo. Revisa siempre los resultados.
               </AlertDescription>
             </Alert>
         </footer>

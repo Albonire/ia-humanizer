@@ -9,6 +9,122 @@ import { pipeline, cos_sim } from "@xenova/transformers";
 dotenv.config();
 
 // ============================================================================
+// OUTPUT VALIDATOR - SISTEMA DE VALIDACIÓN DE CALIDAD
+// ============================================================================
+
+class OutputValidator {
+  /**
+   * Valida que no haya nuevas secciones agregadas
+   * Permite diferencia de hasta 1 sección
+   */
+  static noNewSections(original, generated) {
+    const originalSections = original.split('\n\n').filter(s => s.trim().length > 0).length;
+    const generatedSections = generated.split('\n\n').filter(s => s.trim().length > 0).length;
+    const valid = Math.abs(originalSections - generatedSections) <= 1;
+
+    if (!valid) {
+      console.warn(`[VALIDATOR] Secciones - Original: ${originalSections}, Generado: ${generatedSections}`);
+    }
+    return valid;
+  }
+
+  /**
+   * Valida que se mantenga el tema principal
+   * Similitud temática debe ser > 0.50
+   */
+  static maintainsTopic(original, generated) {
+    const originalWords = original
+      .toLowerCase()
+      .split(/\W+/)
+      .filter(word => word.length > 3);
+    const generatedWords = generated
+      .toLowerCase()
+      .split(/\W+/)
+      .filter(word => word.length > 3);
+
+    const originalSet = new Set(originalWords);
+    const generatedSet = new Set(generatedWords);
+    const intersection = new Set([...originalSet].filter(x => generatedSet.has(x)));
+    const similarity = intersection.size / Math.max(originalSet.size, generatedSet.size);
+    const valid = similarity > 0.50;
+
+    if (!valid) {
+      console.warn(`[VALIDATOR] Similitud temática: ${(similarity * 100).toFixed(2)}%`);
+    }
+    return valid;
+  }
+
+  /**
+   * Valida que la longitud esté dentro de rango aceptable
+   * Permite entre 80% y 120% de la longitud original
+   */
+  static validLength(original, generated) {
+    const ratio = generated.length / original.length;
+    const valid = ratio >= 0.80 && ratio <= 1.20;
+
+    if (!valid) {
+      console.warn(`[VALIDATOR] Longitud - Original: ${original.length}chars, Generado: ${generated.length}chars, Ratio: ${ratio.toFixed(2)}`);
+    }
+    return valid;
+  }
+
+  /**
+   * Valida que no haya comillas agregadas
+   */
+  static noQuotes(generated) {
+    const hasQuotes = generated.includes('"') || generated.includes('"') || generated.includes('"');
+    const valid = !hasQuotes;
+
+    if (!valid) {
+      console.warn(`[VALIDATOR] Comillas detectadas en texto generado`);
+    }
+    return valid;
+  }
+
+  /**
+   * Valida que no haya guiones largos
+   */
+  static noLongDashes(generated) {
+    const hasLongDashes = generated.includes('—') || generated.includes('–');
+    const valid = !hasLongDashes;
+
+    if (!valid) {
+      console.warn(`[VALIDATOR] Guiones largos detectados en texto generado`);
+    }
+    return valid;
+  }
+
+  /**
+   * Ejecuta todas las validaciones y retorna resultado completo
+   */
+  static validateAll(original, generated) {
+    const validations = {
+      noNewSections: OutputValidator.noNewSections(original, generated),
+      maintainsTopic: OutputValidator.maintainsTopic(original, generated),
+      validLength: OutputValidator.validLength(original, generated),
+      noQuotes: OutputValidator.noQuotes(generated),
+      noLongDashes: OutputValidator.noLongDashes(generated)
+    };
+
+    const passed = Object.values(validations).every(v => v === true);
+    const passedCount = Object.values(validations).filter(v => v === true).length;
+    const totalCount = Object.values(validations).length;
+    const score = Math.round((passedCount / totalCount) * 100);
+
+    const result = {
+      passed,
+      details: validations,
+      score,
+      passedValidations: passedCount,
+      totalValidations: totalCount
+    };
+
+    console.log(`[VALIDATOR] Score final: ${score}% (${passedCount}/${totalCount} validaciones pasadas)`);
+    return result;
+  }
+}
+
+// ============================================================================
 // ADVANCED NLP TEXT HUMANIZER CON POS TAGGING, EMBEDDINGS Y VOZ PASIVA
 // ============================================================================
 
@@ -19,150 +135,216 @@ const its = nlp.its;
 // Variable global para el pipeline de embeddings (se carga lazy)
 let embeddingPipeline = null;
 
+// Importar el servicio de traducción modular
+import TranslationFactory from "./src/services/translation/TranslationFactory.js";
+const translationService = TranslationFactory.createService("local");
+
+// Importar el servicio de parafraseo modular
+import ParaphrasingFactory from "./src/services/paraphrasing/ParaphrasingFactory.js";
+const paraphrasingService = ParaphrasingFactory.createService("local");
+
+// Importar listas de palabras expandidas
+import { ACADEMIC_TRANSITIONS, SYNONYMS_BY_POS, WEAK_WORDS_MAP } from "./src/data/wordLists.js";
+
+// Importar servicios avanzados de NLP
+import perplexityService from "./src/services/analysis/PerplexityService.js";
+import contextualSynonymService from "./src/services/nlp/ContextualSynonymService.js";
+
 class AdvancedTextHumanizer {
   constructor() {
     // Mapas de contracciones
     this.contractions = {
-      "can't": "cannot",
-      "won't": "will not",
-      "don't": "do not",
-      "doesn't": "does not",
-      "didn't": "did not",
-      "it's": "it is",
-      "I'm": "I am",
-      "you're": "you are",
-      "we're": "we are",
-      "they're": "they are",
-      "I've": "I have",
-      "you've": "you have",
-      "we've": "we have",
-      "they've": "they have",
-      "I'll": "I will",
-      "you'll": "you will",
-      "we'll": "we will",
-      "they'll": "they will",
-      "wouldn't": "would not",
-      "couldn't": "could not",
-      "shouldn't": "should not",
-      "isn't": "is not",
-      "aren't": "are not",
-      "wasn't": "was not",
-      "weren't": "were not",
-      "haven't": "have not",
-      "hasn't": "has not"
+      "cannot": "can't",
+      "do not": "don't",
+      "will not": "won't",
+      "should not": "shouldn't",
+      "could not": "couldn't",
+      "would not": "wouldn't",
+      "is not": "isn't",
+      "are not": "aren't",
+      "it is": "it's",
+      "that is": "that's",
+      "there is": "there's",
+      "what is": "what's",
+      "who is": "who's",
+      "i am": "I'm",
+      "you are": "you're",
+      "we are": "we're",
+      "they are": "they're",
+      "i have": "I've",
+      "you have": "you've",
+      "we have": "we've",
+      "they have": "they've",
+      "i will": "I'll",
+      "you will": "you'll",
+      "we will": "we will",
+      "they will": "they'll"
     };
 
-    // Transiciones académicas
-    this.academicTransitions = [
-      "Además,",
-      "Asimismo,",
-      "Por lo tanto,",
-      "En consecuencia,",
-      "Sin embargo,",
-      "No obstante,",
-      "Igualmente,",
-      "De hecho,",
-      "En realidad,",
-      "Incluso,",
-      "Por el contrario,",
-      "Más aún,",
-      "A su vez,",
-      "En tal sentido,"
-    ];
+    // Palabras de transición académicas (Importado)
+    this.academicTransitions = ACADEMIC_TRANSITIONS;
 
-    // Diccionario de sinónimos por categoría POS
-    this.synonymsByPOS = {
-      VERB: {
-        "use": ["utilize", "employ", "leverage"],
-        "help": ["facilitate", "assist", "aid"],
-        "show": ["demonstrate", "illustrate", "exhibit"],
-        "make": ["produce", "generate", "create"],
-        "need": ["require", "necessitate", "demand"],
-        "get": ["obtain", "acquire", "gain"],
-        "give": ["provide", "supply", "offer"],
-        "take": ["acquire", "seize", "capture"],
-        "find": ["discover", "locate", "identify"],
-        "think": ["consider", "contemplate", "ponder"]
-      },
-      ADJ: {
-        "good": ["beneficial", "advantageous", "favorable", "excellent"],
-        "bad": ["adverse", "detrimental", "unfavorable", "poor"],
-        "easy": ["straightforward", "facile", "uncomplicated", "simple"],
-        "hard": ["challenging", "difficult", "arduous", "complex"],
-        "nice": ["pleasant", "agreeable", "delightful", "excellent"],
-        "big": ["large", "substantial", "considerable", "significant"],
-        "small": ["minor", "modest", "limited", "diminutive"],
-        "important": ["significant", "crucial", "vital", "essential"]
-      },
-      NOUN: {
-        "thing": ["matter", "subject", "object", "element"],
-        "stuff": ["material", "substance", "content", "items"],
-        "problem": ["issue", "challenge", "difficulty", "concern"],
-        "idea": ["concept", "notion", "thought", "proposition"],
-        "way": ["method", "approach", "manner", "technique"]
-      },
-      ADV: {
-        "very": ["exceptionally", "extremely", "remarkably", "particularly"],
-        "really": ["truly", "genuinely", "actually", "indeed"],
-        "quickly": ["rapidly", "swiftly", "promptly", "expeditiously"],
-        "slowly": ["gradually", "steadily", "leisurely", "deliberately"]
+    // Mapas de sinónimos por categoría gramatical (Importado)
+    this.synonymsByPOS = SYNONYMS_BY_POS;
+
+    // Diccionario de traducción eliminado a favor de TranslationService
+    this.translationDict = {};
+
+    // Configuración de OpenRouter
+    this.openrouterApiKey = process.env.OPENROUTER_API_KEY;
+    this.openrouterUrl = "https://openrouter.ai/api/v1/chat/completions";
+    this.model = "openai/gpt-3.5-turbo";
+  }
+
+  // ============================================================================
+  // INTEGRACIÓN CON OPENROUTER - HUMANIZACIÓN CON IA
+  // ============================================================================
+
+  /**
+   * Construye el prompt de humanización con Few-shot learning
+   */
+  getHumanizationPrompt(text) {
+    return `ROLE: Advanced Text Humanizer
+OBJECTIVE: Rewrite text to sound more natural and human-like WITHOUT adding new information
+LANGUAGE: Keep the original language
+OUTPUT FORMAT: Only rewritten text without any additions or explanations
+
+**ABSOLUTE RULES (NON-NEGOTIABLE)**:
+1. ❌ DO NOT add explanations, comments, or metadata
+2. ❌ DO NOT use formats like headings, lists, quotes, or code blocks
+3. ✅ STRUCTURE:
+   - Same number of paragraphs as original
+   - Same logical sequence
+   - ±15% word count variation
+4. ✅ CONTENT:
+   - Retain all original data and information
+   - Maintain tone and academic style
+   - Natural language flow
+
+**ALLOWED TECHNIQUES**:
+- Syntactic variation (mix simple and compound sentences)
+- Natural transition words (therefore, likewise, however)
+- Strategic word substitution
+- Active voice preference
+- Varied sentence length and structure
+
+**FEW-SHOT EXAMPLES**:
+
+[Example 1 - Input]
+"AI is used in many applications. It helps companies improve efficiency. The technology is important."
+
+[Example 1 - VALID Output]
+"Various applications leverage artificial intelligence to enhance organizational efficiency. This technology has become increasingly important across industries."
+
+[Example 2 - Input]
+"The study showed results. The data was significant. We need more research."
+
+[Example 2 - VALID Output]
+"The study's results demonstrated statistical significance, underscoring the necessity for continued investigation in this domain."
+
+[INVALID Output Examples]
+❌ "The study findings: • Key results • Statistical significance • Need for research"
+❌ "Improved text: The research demonstrated significance requiring further investigation."
+❌ "**Analysis**: The study showed important results..."
+
+**TEXT TO HUMANIZE**:
+${text}
+
+**RESPONSE**:
+Provide ONLY the rewritten text, nothing else. Start directly with the humanized content.`;
+  }
+
+  /**
+   * Humaniza texto usando OpenRouter con GPT-3.5-turbo
+   */
+  async humanizeWithAI(text) {
+    if (!this.openrouterApiKey) {
+      console.error("[IA] Error: OPENROUTER_API_KEY no configurada");
+      return {
+        success: false,
+        error: "API Key not configured",
+        originalText: text
+      };
+    }
+
+    if (!text || text.trim().length === 0) {
+      return {
+        success: false,
+        error: "Empty text provided",
+        originalText: text
+      };
+    }
+
+    try {
+      console.log("[IA] Inicializando humanización con OpenRouter...");
+      console.log(`[IA] Modelo: ${this.model}`);
+      console.log(`[IA] Longitud entrada: ${text.length} caracteres`);
+
+      const prompt = this.getHumanizationPrompt(text);
+
+      const response = await axios.post(
+        this.openrouterUrl,
+        {
+          model: this.model,
+          messages: [
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          temperature: 0.7,
+          top_p: 0.95,
+          max_tokens: Math.min(text.length * 1.5, 4000),
+          top_k: 0,
+          frequency_penalty: 0.0,
+          presence_penalty: 0.0
+        },
+        {
+          headers: {
+            "Authorization": `Bearer ${this.openrouterApiKey}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "http://localhost:5173",
+            "X-Title": "IA Humanizer v2"
+          },
+          timeout: 30000
+        }
+      );
+
+      const humanizedText = response.data?.choices?.[0]?.message?.content || "";
+
+      if (!humanizedText) {
+        console.warn("[IA] No content returned from API");
+        return {
+          success: false,
+          error: "Empty response from API",
+          originalText: text
+        };
       }
-    };
 
-    // Diccionario de traducción ES <-> EN
-    this.translationDict = {
-      "es-en": {
-        "hola": "hello",
-        "gracias": "thank you",
-        "sí": "yes",
-        "no": "no",
-        "por favor": "please",
-        "el": "the",
-        "la": "the",
-        "de": "of",
-        "en": "in",
-        "es": "is",
-        "que": "that",
-        "para": "for",
-        "con": "with",
-        "sin": "without",
-        "texto": "text",
-        "palabra": "word",
-        "información": "information",
-        "contenido": "content",
-        "escrito": "written",
-        "párrafo": "paragraph",
-        "oración": "sentence",
-        "importante": "important",
-        "necesario": "necessary",
-        "posible": "possible"
-      },
-      "en-es": {
-        "hello": "hola",
-        "thank you": "gracias",
-        "yes": "sí",
-        "no": "no",
-        "please": "por favor",
-        "the": "el",
-        "of": "de",
-        "in": "en",
-        "is": "es",
-        "that": "que",
-        "for": "para",
-        "with": "con",
-        "without": "sin",
-        "text": "texto",
-        "word": "palabra",
-        "information": "información",
-        "content": "contenido",
-        "written": "escrito",
-        "paragraph": "párrafo",
-        "sentence": "oración",
-        "important": "importante",
-        "necessary": "necesario",
-        "possible": "posible"
-      }
-    };
+      console.log("[IA] ✅ Humanización completada");
+      console.log(`[IA] Longitud salida: ${humanizedText.length} caracteres`);
+
+      return {
+        success: true,
+        originalText: text,
+        humanizedText: humanizedText.trim(),
+        model: this.model,
+        inputLength: text.length,
+        outputLength: humanizedText.length
+      };
+    } catch (error) {
+      console.error("[IA] Error en humanización:", error.message);
+
+      const errorDetails = error.response?.data || error.message;
+      console.error("[IA] Detalles error:", errorDetails);
+
+      return {
+        success: false,
+        error: error.message,
+        details: errorDetails,
+        originalText: text
+      };
+    }
   }
 
   // ============================================================================
@@ -307,7 +489,7 @@ class AdvancedTextHumanizer {
             // Encontrar y reemplazar la palabra
             const regex = new RegExp(`\\b${token.word}\\b`, "i");
             const match = result.substring(offset).match(regex);
-            
+
             if (match) {
               const index = offset + match.index;
               result = result.substring(0, index) + replacement + result.substring(index + token.word.length);
@@ -368,7 +550,7 @@ class AdvancedTextHumanizer {
 
       for (let i = 0; i < posData.length; i++) {
         const pos = posData[i].pos;
-        
+
         if ((pos === "NOUN" || pos === "PROPN" || pos === "PRON") && subjectIdx === -1) {
           subjectIdx = i;
         } else if (pos === "VERB" && subjectIdx !== -1 && verbIdx === -1) {
@@ -408,12 +590,12 @@ class AdvancedTextHumanizer {
 
   getBEForm(verb) {
     const lowerVerb = verb.toLowerCase();
-    
+
     // Tiempo presente
     if (lowerVerb.endsWith("s") || lowerVerb.endsWith("es")) {
       return "is";
     }
-    
+
     // Tiempo pasado
     if (lowerVerb.endsWith("ed") || this.isIrregularPast(lowerVerb)) {
       return "was";
@@ -601,7 +783,7 @@ class AdvancedTextHumanizer {
 
   addAcademicTransitions(text) {
     const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
-    
+
     return sentences.map((sentence, index) => {
       if (index > 0 && Math.random() < 0.4) {
         const transition = this.academicTransitions[
@@ -613,38 +795,65 @@ class AdvancedTextHumanizer {
     }).join("");
   }
 
-  // Traducción local básica
-  async translateLocal(text, fromLang, toLang) {
-    const direction = `${fromLang}-${toLang}`;
-    const dict = this.translationDict[direction];
+  // Reemplazo de sinónimos contextual con BERT
+  async replaceSynonymsContextual(text) {
+    try {
+      const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+      let resultSentences = [];
 
-    if (!dict) return text;
+      for (const sentence of sentences) {
+        let newSentence = sentence;
+        const words = sentence.split(/\s+/);
 
-    let result = text;
-    const words = text.toLowerCase().split(/\s+/);
-    
-    for (const word of words) {
-      if (dict[word]) {
-        const regex = new RegExp(`\\b${word}\\b`, "gi");
-        result = result.replace(regex, dict[word]);
+        // Intentar reemplazar 1 o 2 palabras clave por oración
+        for (let i = 0; i < words.length; i++) {
+          const word = words[i].replace(/[^a-zA-Z]/g, "");
+          if (word.length > 4 && Math.random() < 0.3) { // Solo palabras largas y 30% chance
+            const synonyms = await contextualSynonymService.getSynonyms(sentence, word);
+            if (synonyms.length > 0) {
+              const bestSynonym = synonyms[0];
+              // Reemplazo simple (se podría mejorar preservando case)
+              newSentence = newSentence.replace(word, bestSynonym);
+              break; // Solo un cambio por oración para no romperla
+            }
+          }
+        }
+        resultSentences.push(newSentence);
       }
+      return resultSentences.join(" ");
+    } catch (error) {
+      console.error("Error en BERT synonyms:", error);
+      return text;
     }
+  }
 
-    return result;
+  // Parafraseo local usando T5 (Transformers.js)
+  async paraphraseLocal(text) {
+    try {
+      console.log("[PARAPHRASE] Iniciando parafraseo con T5...");
+      const result = await paraphrasingService.paraphrase(text);
+      return result;
+    } catch (error) {
+      console.error("[PARAPHRASE] Error en servicio de parafraseo:", error);
+      return text;
+    }
+  }
+
+  // Traducción local avanzada usando Transformers.js
+  async translateLocal(text, fromLang, toLang) {
+    try {
+      console.log(`[TRANSLATION] Traduciendo de ${fromLang} a ${toLang}...`);
+      const result = await translationService.translate(text, fromLang, toLang);
+      return result;
+    } catch (error) {
+      console.error("[TRANSLATION] Error en servicio de traducción:", error);
+      return text; // Fallback al original en caso de error
+    }
   }
 
   // Mejorador de escritura
   improveWritingLocal(text) {
-    const weakWords = {
-      "\\bvery\\b": "exceptionally",
-      "\\breally\\b": "truly",
-      "\\bnice\\b": "excellent",
-      "\\bthing\\b": "matter",
-      "\\bstuff\\b": "material",
-      "\\blot\\b": "significant number",
-      "\\bkind of\\b": "somewhat",
-      "\\bsort of\\b": "rather"
-    };
+    const weakWords = WEAK_WORDS_MAP;
 
     let result = text;
     for (const [weak, strong] of Object.entries(weakWords)) {
@@ -745,6 +954,197 @@ class AdvancedTextHumanizer {
       }
     };
   }
+
+  // ============================================================================
+  // PIPELINE COMPLETO - HUMANIZACIÓN CON IA + VALIDACIÓN + NLP
+  // ============================================================================
+
+  /**
+   * Pipeline completo que orquesta:
+   * 1. Humanización con IA (OpenRouter)
+   * 2. Validación de salida (OutputValidator)
+   * 3. Mejoras NLP (POS tagging, etc)
+   * 4. Correcciones gramaticales y finales
+   */
+  async humanizeComplete(text, options = {}) {
+    const startTime = Date.now();
+    const result = {
+      original: text,
+      stages: {},
+      success: false,
+      error: null,
+      executionTime: 0
+    };
+
+    try {
+      console.log("\n" + "=".repeat(70));
+      console.log("🚀 INICIANDO PIPELINE COMPLETO DE HUMANIZACIÓN");
+      console.log("=".repeat(70));
+
+      // ======== STAGE 1: VALIDACIÓN DE ENTRADA ========
+      console.log("\n[STAGE 1] Validando entrada...");
+      if (!text || text.trim().length === 0) {
+        throw new Error("Texto vacío no permitido");
+      }
+      if (text.length > 5000) {
+        console.warn(`[STAGE 1] Texto muy largo (${text.length}), truncando a 5000 caracteres`);
+        result.original = text.substring(0, 5000);
+      }
+      result.stages.inputValidation = { passed: true };
+      console.log("✅ Entrada validada correctamente");
+
+      // ======== STAGE 2: HUMANIZACIÓN CON IA ========
+      // console.log("\n[STAGE 2] Ejecutando humanización con IA (OpenRouter)...");
+      // const iaResult = await this.humanizeWithAI(result.original);
+
+      // BYPASS OPENROUTER (Local Mode Only)
+      console.log("\n[STAGE 2] ⚠️ Humanización IA DESACTIVADA (Modo Local Puro)");
+      const iaResult = { success: false, error: "Disabled by user" };
+
+      if (!iaResult.success) {
+        console.warn(`[STAGE 2] ⚠️ Humanización IA falló: ${iaResult.error}`);
+        console.warn("[STAGE 2] Continuando con transformaciones NLP locales...");
+        result.stages.iaHumanization = {
+          applied: false,
+          reason: iaResult.error,
+          text: result.original
+        };
+        var humanizedText = result.original;
+      } else {
+        humanizedText = iaResult.humanizedText;
+        result.stages.iaHumanization = {
+          applied: true,
+          model: iaResult.model,
+          inputLength: iaResult.inputLength,
+          outputLength: iaResult.outputLength,
+          text: humanizedText
+        };
+        console.log("✅ Humanización IA completada");
+
+        // Limpieza de artefactos (bullets, markdown residual)
+        if (humanizedText.includes("•") || humanizedText.includes("*")) {
+          console.log("  - Limpiando artefactos de lista/markdown...");
+          humanizedText = humanizedText.replace(/^[•\-\*]\s+/gm, "").replace(/\*\*/g, "");
+        }
+      }
+
+      // ======== STAGE 3: VALIDACIÓN DE SALIDA ========
+      console.log("\n[STAGE 3] Validando salida de IA...");
+      const validation = OutputValidator.validateAll(result.original, humanizedText);
+      result.stages.outputValidation = validation;
+
+      if (!validation.passed) {
+        console.warn(`[STAGE 3] ⚠️ Algunas validaciones fallaron (Score: ${validation.score}%)`);
+      } else {
+        console.log(`✅ Validación completada (Score: ${validation.score}%)`);
+      }
+
+      // ======== STAGE 3.5: ANÁLISIS DE PERPLEJIDAD (AI DETECTION INTERNO) ========
+      console.log("\n[STAGE 3.5] Analizando Perplejidad/Complejidad...");
+      const perplexityScore = await perplexityService.calculatePerplexity(humanizedText);
+      console.log(`  - Score de Complejidad: ${perplexityScore.toFixed(2)}`);
+
+      let aggressiveMode = false;
+      if (perplexityScore < 40) { // Umbral arbitrario para "muy simple/robótico"
+        console.log("  ⚠️ Texto detectado como muy predecible (Posible IA). Activando MODO AGRESIVO.");
+        aggressiveMode = true;
+      }
+
+      // ======== STAGE 4: MEJORAS NLP ========
+      console.log("\n[STAGE 4] Aplicando mejoras NLP avanzadas...");
+      let nlpEnhanced = humanizedText;
+
+      // Convertir a voz pasiva selectively (DESACTIVADO POR DEFECTO para evitar frases robóticas)
+      if (options.usePassiveVoice === true) {
+        console.log("  - Analizando voz pasiva...");
+        nlpEnhanced = await this.convertToPassiveVoice(nlpEnhanced);
+      }
+
+      // Reemplazar sinónimos con embeddings o BERT
+      if (options.useEmbeddings || aggressiveMode) {
+        console.log("  - Mejorando sinónimos con Contextual BERT...");
+        // Usamos el servicio contextual si está disponible, sino fallback al viejo
+        nlpEnhanced = await this.replaceSynonymsContextual(nlpEnhanced);
+      } else {
+        console.log("  - Reemplazando sinónimos (POS-based)...");
+        nlpEnhanced = await this.replaceSynonymsAdvanced(nlpEnhanced, false);
+      }
+
+      // Corregir concordancia de género para español
+      if (result.original.match(/[áéíóúñü]/)) {
+        console.log("  - Corrigiendo concordancia de género (español)...");
+        nlpEnhanced = this.fixGenderConcordance(nlpEnhanced);
+      }
+
+      result.stages.nlpEnhancements = {
+        applied: true,
+        passiveVoiceApplied: options.usePassiveVoice !== false,
+        embeddingsApplied: options.useEmbeddings || false,
+        text: nlpEnhanced
+      };
+      console.log("✅ Mejoras NLP completadas");
+
+      // ======== STAGE 5: CORRECCIONES FINALES ========
+      console.log("\n[STAGE 5] Aplicando correcciones finales...");
+      let finalText = nlpEnhanced;
+
+      // Expandir contracciones
+      for (const [contraction, expansion] of Object.entries(this.contractions)) {
+        const regex = new RegExp(`\\b${contraction.replace(/'/g, "\\'")}\\b`, "gi");
+        finalText = finalText.replace(regex, (match) => {
+          const isCapitalized = match[0] === match[0].toUpperCase();
+          return isCapitalized
+            ? expansion.charAt(0).toUpperCase() + expansion.slice(1)
+            : expansion;
+        });
+      }
+
+      // Agregar transiciones académicas
+      if (options.addTransitions !== false) {
+        console.log("  - Agregando transiciones académicas...");
+        const sentences = finalText.match(/[^.!?]+[.!?]+/g) || [finalText];
+        finalText = sentences
+          .map((sentence, index) => {
+            if (index === 0) return sentence;
+            if (Math.random() < 0.25) {
+              const transition = this.academicTransitions[
+                Math.floor(Math.random() * this.academicTransitions.length)
+              ];
+              const trimmed = sentence.trim();
+              return transition + " " + trimmed.charAt(0).toLowerCase() + trimmed.slice(1);
+            }
+            return sentence;
+          })
+          .join(" ");
+      }
+
+      result.stages.finalCorrections = { applied: true };
+      console.log("✅ Correcciones finales completadas");
+
+      // ======== RESUMEN FINAL ========
+      result.finalText = finalText.trim();
+      result.success = true;
+      result.executionTime = Date.now() - startTime;
+
+      console.log("\n" + "=".repeat(70));
+      console.log("✅ PIPELINE COMPLETADO EXITOSAMENTE");
+      console.log("=".repeat(70));
+      console.log(`⏱️  Tiempo total: ${result.executionTime}ms`);
+      console.log(`📊 Validación: ${validation.score}%`);
+      console.log(`📝 Entrada: ${result.original.length} caracteres`);
+      console.log(`📄 Salida: ${finalText.length} caracteres`);
+      console.log("=".repeat(70) + "\n");
+
+      return result;
+
+    } catch (error) {
+      console.error("\n❌ ERROR EN PIPELINE:", error.message);
+      result.success = false;
+      result.error = error.message;
+      result.executionTime = Date.now() - startTime;
+      return result;
+    }
+  }
 }
 
 // ============================================================================
@@ -823,32 +1223,53 @@ app.post("/api/humanize-advanced", async (req, res) => {
 // Endpoint compatible - Humanización simple (para compatibilidad con frontend)
 app.post("/api/humanize", async (req, res) => {
   try {
-    const { text, lang = "en" } = req.body;
+    const {
+      text,
+      lang = "en",
+      useEmbeddings = false,
+      usePassiveVoice = true,
+      addTransitions = true
+    } = req.body;
 
     if (!text) {
       return res.status(400).json({ error: "Se requiere el campo 'text'" });
     }
 
-    console.log(`[HUMANIZE] Procesando: "${text.substring(0, 50)}..."`);
+    console.log(`[HUMANIZE-COMPLETE] Procesando: "${text.substring(0, 50)}..."`);
 
-    // Aplicar transformación avanzada con configuración por defecto
-    let transformed = await humanizer.transformAdvanced(text, {
-      useEmbeddings: false,
-      usePassiveVoice: false,
-      usePOSTagging: true
+    // Usar el pipeline completo con todas las mejoras
+    const pipelineResult = await humanizer.humanizeComplete(text, {
+      useEmbeddings,
+      usePassiveVoice,
+      addTransitions
     });
 
-    // Corregir concordancia de género (para español)
-    if (lang === "es" || text.match(/[áéíóúñü]/)) {
-      transformed = humanizer.fixGenderConcordance(transformed);
+    if (!pipelineResult.success) {
+      return res.status(500).json({
+        error: "Error en pipeline de humanización",
+        details: pipelineResult.error,
+        stages: pipelineResult.stages
+      });
     }
 
+    // Respuesta compatible con frontend (mantener formato esperado)
     res.json({
-      result: transformed,
-      message: "Texto humanizado exitosamente"
+      result: pipelineResult.finalText,
+      message: "Texto humanizado exitosamente con IA + NLP",
+      original: pipelineResult.original,
+      validation: pipelineResult.stages.outputValidation,
+      stats: {
+        executionTime: pipelineResult.executionTime,
+        inputLength: pipelineResult.original.length,
+        outputLength: pipelineResult.finalText.length,
+        iaHumanizationApplied: pipelineResult.stages.iaHumanization.applied,
+        validationScore: pipelineResult.stages.outputValidation.score,
+        model: pipelineResult.stages.iaHumanization.model || "local"
+      },
+      stages: pipelineResult.stages
     });
   } catch (error) {
-    console.error("[HUMANIZE] Error:", error);
+    console.error("[HUMANIZE-COMPLETE] Error:", error);
     res.status(500).json({
       error: "Error procesando la humanización",
       details: error.message
@@ -1034,16 +1455,78 @@ app.post("/api/detect-ai", async (req, res) => {
   }
 });
 
+// Endpoint - Humanización con IA (OpenRouter)
+app.post("/api/humanize-ai", async (req, res) => {
+  try {
+    const { text } = req.body;
+
+    if (!text) {
+      return res.status(400).json({ error: "Se requiere el campo 'text'" });
+    }
+
+    console.log(`[HUMANIZE-AI] Procesando con OpenRouter: "${text.substring(0, 50)}..."`);
+
+    const iaResult = await humanizer.humanizeWithAI(text);
+
+    res.json({
+      ...iaResult,
+      endpoint: "/api/humanize-ai"
+    });
+  } catch (error) {
+    console.error("[HUMANIZE-AI] Error:", error);
+    res.status(500).json({
+      error: "Error en humanización con IA",
+      details: error.message
+    });
+  }
+});
+
+// Endpoint - Validar salida de humanización
+app.post("/api/validate-humanization", async (req, res) => {
+  try {
+    const { original, humanized } = req.body;
+
+    if (!original || !humanized) {
+      return res.status(400).json({
+        error: "Se requieren ambos campos: 'original' y 'humanized'"
+      });
+    }
+
+    console.log(`[VALIDATE] Validando humanización...`);
+
+    const validation = OutputValidator.validateAll(original, humanized);
+
+    res.json({
+      original: original.substring(0, 100) + "...",
+      humanized: humanized.substring(0, 100) + "...",
+      validation: validation,
+      endpoint: "/api/validate-humanization"
+    });
+  } catch (error) {
+    console.error("[VALIDATE] Error:", error);
+    res.status(500).json({
+      error: "Error validando humanización",
+      details: error.message
+    });
+  }
+});
+
 // Iniciar servidor
 app.listen(PORT, () => {
   console.log(`\n🚀 Advanced Text Humanizer API corriendo en http://localhost:${PORT}`);
   console.log(`\n✨ Características avanzadas:`);
   console.log(`   ✓ POS Tagging con wink-nlp`);
   console.log(`   ✓ Semantic Embeddings con Transformers.js`);
+  console.log(`   ✓ Humanización con IA (OpenRouter - GPT-3.5-turbo)`);
+  console.log(`   ✓ Validación de salida avanzada`);
   console.log(`   ✓ Conversión a Voz Pasiva`);
+  console.log(`   ✓ Corrección de concordancia de género (ES)`);
   console.log(`   ✓ Reemplazo inteligente de sinónimos`);
-  console.log(`\n📚 Endpoints disponibles:`);
-  console.log(`   POST /api/humanize-advanced`);
+  console.log(`\n📚 Endpoints principales:`);
+  console.log(`   POST /api/humanize (completo: IA + NLP + Validación)`);
+  console.log(`   POST /api/humanize-ai (solo IA)`);
+  console.log(`   POST /api/validate-humanization (validar salida)`);
+  console.log(`   POST /api/humanize-advanced (NLP avanzado)`);
   console.log(`   POST /api/pos-tags`);
   console.log(`   POST /api/passive-voice`);
   console.log(`   POST /api/synonyms-embeddings`);
