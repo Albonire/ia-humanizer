@@ -125,10 +125,10 @@ class OutputValidator {
 }
 
 // ============================================================================
-// ADVANCED NLP TEXT HUMANIZER CON POS TAGGING, EMBEDDINGS Y VOZ PASIVA
+// ADVANCED NLP TEXT HUMANIZER CON POS TAGGING, EMBEDDINGS & PASIVE VOICE 
 // ============================================================================
 
-// Inicializar wink-nlp para POS tagging
+// Initialize wink-nlp for POS tagging
 const nlp = winkNLP(model);
 const its = nlp.its;
 

@@ -10,7 +10,7 @@ async function debugPipeline() {
     await translationService.initialize();
     await paraphrasingService.initialize();
 
-    // Case 1: "bianual" -> "bibiar"
+    // case 1: "bianual" -> "bibiar"
     const text1_ES = "Programas de screening como la mamografía anual o bianual a partir de cierta edad.";
     console.log(`\n--- CASE 1: "bianual" ---`);
     console.log(`Input (ES): ${text1_ES}`);
@@ -25,7 +25,7 @@ async function debugPipeline() {
     console.log(`Back  (ES): ${text1_ES_Back}`);
 
 
-    // Case 2: Meaning Inversion
+    // case 2: Meaning Inversion
     const text2_ES = "Si bien su incidencia es elevada, una de las armas más poderosas contra él es la detección temprana.";
     console.log(`\n--- CASE 2: Meaning Inversion ---`);
     console.log(`Input (ES): ${text2_ES}`);
