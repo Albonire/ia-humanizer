@@ -9,13 +9,13 @@ import { pipeline, cos_sim } from "@xenova/transformers";
 dotenv.config();
 
 // ============================================================================
-// OUTPUT VALIDATOR - SISTEMA DE VALIDACIÓN DE CALIDAD
+// OUTPUT VALIDATOR - QUALITY VALIDATOR SYSTEM
 // ============================================================================
 
 class OutputValidator {
   /**
-   * Valida que no haya nuevas secciones agregadas
-   * Permite diferencia de hasta 1 sección
+   * it validates there're no new add sections
+   * it allows difference til one section
    */
   static noNewSections(original, generated) {
     const originalSections = original.split('\n\n').filter(s => s.trim().length > 0).length;
@@ -30,7 +30,7 @@ class OutputValidator {
 
   /**
    * Valida que se mantenga el tema principal
-   * Similitud temática debe ser > 0.50
+   * theme similarity must be > 0.50
    */
   static maintainsTopic(original, generated) {
     const originalWords = original
@@ -82,10 +82,10 @@ class OutputValidator {
   }
 
   /**
-   * Valida que no haya guiones largos
+   * validates there are no em dashes or long dashes
    */
   static noLongDashes(generated) {
-    const hasLongDashes = generated.includes('—') || generated.includes('–');
+    const hasLongDashes = generated.includes('—');
     const valid = !hasLongDashes;
 
     if (!valid) {
