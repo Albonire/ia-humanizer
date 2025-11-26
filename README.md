@@ -20,10 +20,10 @@ Sigue estos pasos:
 
 ```sh
 # 1. Clona el repositorio usando la URL de tu proyecto.
-git clone <YOUR_GIT_URL>
+git clone https://github.com/Albonire/ia-humanizer.git
 
 # 2. Entra en el directorio del proyecto.
-cd <YOUR_PROJECT_NAME>
+cd ia-humanizer
 
 # 3. Instala las dependencias necesarias.
 npm i
