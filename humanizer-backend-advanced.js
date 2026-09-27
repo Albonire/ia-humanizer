@@ -139,9 +139,13 @@ let embeddingPipeline = null;
 import TranslationFactory from "./src/services/translation/TranslationFactory.js";
 const translationService = TranslationFactory.createService("local");
 
-// Importar el servicio de parafraseo modular
+// Importar el servicio de parafraseo modular (T5 local, nativo)
 import ParaphrasingFactory from "./src/services/paraphrasing/ParaphrasingFactory.js";
 const paraphrasingService = ParaphrasingFactory.createService("local");
+
+// Importar detector local de IA basado en GPT-2 (perplejidad real + burstiness)
+import { LocalAIDetector } from "./src/services/analysis/LocalAIDetector.js";
+const localAIDetector = new LocalAIDetector();
 
 // Importar listas de palabras expandidas
 import { ACADEMIC_TRANSITIONS, SYNONYMS_BY_POS, WEAK_WORDS_MAP } from "./src/data/wordLists.js";
@@ -730,10 +734,72 @@ Provide ONLY the rewritten text, nothing else. Start directly with the humanized
   // MÉTODOS BÁSICOS MEJORADOS
   // ============================================================================
 
+  // ============================================================================
+  // HUMANIZACIÓN NATIVA: EXPANSIÓN DE CONTRACCIONES (inglés)
+  // Los detectores de IA asocian la ausencia de contracciones con texto humano.
+  // Este mapa va SIEMPRE en dirección contraction -> expanded.
+  // ============================================================================
+
+  static get CONTRACTIONS_TO_EXPANDED() {
+    return {
+      "cannot": "can not",
+      "won't": "will not",
+      "don't": "do not",
+      "doesn't": "does not",
+      "didn't": "did not",
+      "isn't": "is not",
+      "aren't": "are not",
+      "wasn't": "was not",
+      "weren't": "were not",
+      "haven't": "have not",
+      "hasn't": "has not",
+      "hadn't": "had not",
+      "wouldn't": "would not",
+      "couldn't": "could not",
+      "shouldn't": "should not",
+      "mustn't": "must not",
+      "needn't": "need not",
+      "shan't": "shall not",
+      "it's": "it is",
+      "that's": "that is",
+      "there's": "there is",
+      "here's": "here is",
+      "what's": "what is",
+      "who's": "who is",
+      "when's": "when is",
+      "where's": "where is",
+      "how's": "how is",
+      "let's": "let us",
+      "one's": "one is",
+      "i'm": "I am",
+      "i've": "I have",
+      "i'll": "I will",
+      "i'd": "I would",
+      "you're": "you are",
+      "you've": "you have",
+      "you'll": "you will",
+      "you'd": "you would",
+      "we're": "we are",
+      "we've": "we have",
+      "we'll": "we will",
+      "we'd": "we would",
+      "they're": "they are",
+      "they've": "they have",
+      "they'll": "they will",
+      "they'd": "they would",
+      "he's": "he is",
+      "she's": "she is",
+      "he'll": "he will",
+      "she'll": "she will",
+      "he'd": "he would",
+      "she'd": "she would"
+    };
+  }
+
   expandContractions(text) {
     let result = text;
-    for (const [contraction, expansion] of Object.entries(this.contractions)) {
-      const regex = new RegExp(`\\b${contraction}\\b`, "gi");
+    for (const [contraction, expansion] of Object.entries(AdvancedTextHumanizer.CONTRACTIONS_TO_EXPANDED)) {
+      const regex = new RegExp(`\\b${contraction.replace(/'/g, "\\'")}\\b`, "gi");
       result = result.replace(regex, (match) => {
         const isCapitalized = match[0] === match[0].toUpperCase();
         return isCapitalized
@@ -851,48 +917,42 @@ Provide ONLY the rewritten text, nothing else. Start directly with the humanized
     }
   }
 
-  // Mejorador de escritura
+  // Mejorador de escritura: sustituye palabras débiles por alternativas fuertes.
+  // WEAK_WORDS_MAP ya trae patrones \b...\b y formas conjugadas exactas,
+  // por lo que se respeta el patrón original y solo se preserva la capitalización.
   improveWritingLocal(text) {
-    const weakWords = WEAK_WORDS_MAP;
-
     let result = text;
-    for (const [weak, strong] of Object.entries(weakWords)) {
+    for (const [pattern, strong] of Object.entries(WEAK_WORDS_MAP)) {
       if (Math.random() < 0.5) {
-        const regex = new RegExp(weak, "gi");
-        result = result.replace(regex, strong);
+        const regex = new RegExp(pattern, "gi");
+        result = result.replace(regex, (match) => {
+          let replacement = strong;
+          if (match[0] === match[0].toUpperCase() && strong[0] !== strong[0].toUpperCase()) {
+            replacement = strong.charAt(0).toUpperCase() + strong.slice(1);
+          }
+          return replacement;
+        });
       }
     }
 
     return result;
   }
 
-  // Parafraseador local
-  paraphraseLocal(text) {
-    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
-    return sentences.map(s => s.trim()).join(" ");
-  }
-
-  // Detector de IA local
-  detectAILocal(text) {
-    let aiScore = 0;
-    const checks = [];
-
-    const contractionCount = (text.match(/\b(can't|won't|don't|isn't|aren't|it's|I'm|you're|we're|they're)\b/gi) || []).length;
-    if (contractionCount === 0) {
-      aiScore += 15;
-      checks.push("Sin contracciones (rasgo de IA)");
+  // Detector de IA local NATIVO: perplejidad GPT-2 + burstiness + heurísticas
+  async detectAILocal(text) {
+    try {
+      return await localAIDetector.detect(text);
+    } catch (error) {
+      console.error("[DETECT-AI] Error en detector nativo:", error.message);
+      // Fallback heurístico mínimo si el modelo no pudo cargarse
+      let aiScore = 40;
+      const checks = ["Fallback heurístico (modelo no disponible)"];
+      const contractionCount = (text.match(/\b(can't|won't|don't|isn't|aren't|it's|I'm|you're|we're|they're)\b/gi) || []).length;
+      if (contractionCount === 0) aiScore += 15;
+      const academicWords = (text.match(/\b(moreover|furthermore|consequently|notwithstanding|heretofore|utilize|facilitate|leverage)\b/gi) || []).length;
+      if (academicWords > 3) aiScore += 10;
+      return { isAI: aiScore > 50, confidence: Math.min(aiScore, 100), checks };
     }
-
-    const academicWords = (text.match(/\b(moreover|furthermore|consequently|notwithstanding|heretofore|utilize|facilitate|leverage)\b/gi) || []).length;
-    if (academicWords > 3) {
-      aiScore += 10;
-      checks.push("Demasiadas palabras académicas");
-    }
-
-    const confidence = Math.min(aiScore, 100);
-    const isAI = confidence > 50;
-
-    return { isAI, confidence, checks };
   }
 
   // Transformación completa con todas las técnicas avanzadas
@@ -993,23 +1053,38 @@ Provide ONLY the rewritten text, nothing else. Start directly with the humanized
       result.stages.inputValidation = { passed: true };
       console.log("✅ Entrada validada correctamente");
 
-      // ======== STAGE 2: HUMANIZACIÓN CON IA ========
-      // console.log("\n[STAGE 2] Ejecutando humanización con IA (OpenRouter)...");
-      // const iaResult = await this.humanizeWithAI(result.original);
+      // ======== STAGE 2: HUMANIZACIÓN NATIVA (PARAFRASEO T5 LOCAL) ========
+      let iaResult;
+      var humanizedText; // eslint-disable-line no-var
 
-      // BYPASS OPENROUTER (Local Mode Only)
-      console.log("\n[STAGE 2] ⚠️ Humanización IA DESACTIVADA (Modo Local Puro)");
-      const iaResult = { success: false, error: "Disabled by user" };
+      if (options.useAI === true && this.openrouterApiKey) {
+        // Opcional: enriquecer con IA externa solo si hay clave y se pide explícitamente
+        console.log("\n[STAGE 2] Humanizando con IA externa (OpenRouter)...");
+        iaResult = await this.humanizeWithAI(result.original);
+      } else {
+        // Modo por defecto: humanización NATIVA con modelo FLAN-T5 local (Transformers.js)
+        console.log("\n[STAGE 2] Humanizando con parafraseo nativo (FLAN-T5 local)...");
+        try {
+          const t5Text = await paraphrasingService.paraphrase(result.original);
+          if (t5Text && t5Text.trim().length > 0 && t5Text !== result.original) {
+            iaResult = { success: true, humanizedText: t5Text, model: "Xenova/flan-t5-base (local)" };
+          } else {
+            iaResult = { success: false, error: "El parafraseo nativo no produjo cambios" };
+          }
+        } catch (error) {
+          iaResult = { success: false, error: error.message };
+        }
+      }
 
       if (!iaResult.success) {
-        console.warn(`[STAGE 2] ⚠️ Humanización IA falló: ${iaResult.error}`);
+        console.warn(`[STAGE 2] ⚠️ Humanización principal falló: ${iaResult.error}`);
         console.warn("[STAGE 2] Continuando con transformaciones NLP locales...");
         result.stages.iaHumanization = {
           applied: false,
           reason: iaResult.error,
           text: result.original
         };
-        var humanizedText = result.original;
+        humanizedText = result.original;
       } else {
         humanizedText = iaResult.humanizedText;
         result.stages.iaHumanization = {
@@ -1039,15 +1114,20 @@ Provide ONLY the rewritten text, nothing else. Start directly with the humanized
         console.log(`✅ Validación completada (Score: ${validation.score}%)`);
       }
 
-      // ======== STAGE 3.5: ANÁLISIS DE PERPLEJIDAD (AI DETECTION INTERNO) ========
-      console.log("\n[STAGE 3.5] Analizando Perplejidad/Complejidad...");
-      const perplexityScore = await perplexityService.calculatePerplexity(humanizedText);
-      console.log(`  - Score de Complejidad: ${perplexityScore.toFixed(2)}`);
+      // ======== STAGE 3.5: ANÁLISIS DE PERPLEJIDAD NATIVA (GPT-2 LOCAL) ========
+      console.log("\n[STAGE 3.5] Analizando Perplejidad nativa (GPT-2 local)...");
+      const pplAnalysis = await localAIDetector.calculatePerplexity(humanizedText);
+      const perplexityScore = pplAnalysis ? pplAnalysis.perplexity : null;
+      console.log(`  - Perplejidad GPT-2: ${perplexityScore !== null ? perplexityScore.toFixed(2) : "N/D"}`);
 
       let aggressiveMode = false;
-      if (perplexityScore < 40) { // Umbral arbitrario para "muy simple/robótico"
+      if (perplexityScore !== null && perplexityScore < 20) { // texto muy predecible = rasgo de IA
         console.log("  ⚠️ Texto detectado como muy predecible (Posible IA). Activando MODO AGRESIVO.");
         aggressiveMode = true;
+      } else if (perplexityScore === null) {
+        // Fallback a la heurística léxica si el modelo no pudo cargarse
+        const legacyScore = await perplexityService.calculatePerplexity(humanizedText);
+        aggressiveMode = legacyScore < 40;
       }
 
       // ======== STAGE 4: MEJORAS NLP ========
@@ -1088,27 +1168,48 @@ Provide ONLY the rewritten text, nothing else. Start directly with the humanized
       console.log("\n[STAGE 5] Aplicando correcciones finales...");
       let finalText = nlpEnhanced;
 
-      // Expandir contracciones
-      for (const [contraction, expansion] of Object.entries(this.contractions)) {
-        const regex = new RegExp(`\\b${contraction.replace(/'/g, "\\'")}\\b`, "gi");
-        finalText = finalText.replace(regex, (match) => {
-          const isCapitalized = match[0] === match[0].toUpperCase();
-          return isCapitalized
-            ? expansion.charAt(0).toUpperCase() + expansion.slice(1)
-            : expansion;
-        });
+      // 5.1 Expandir contracciones (rasgo humano clave para detectores de IA)
+      console.log("  - Expandiendo contracciones (humanización nativa)...");
+      finalText = this.expandContractions(finalText);
+
+      // 5.2 Variación natural del ritmo de oraciones (burstiness humana):
+      // las IA escriben con ritmos uniformes; aquí se fusiona ocasionalmente
+      // un remate corto con la oración larga anterior para crear ritmo irregular.
+      {
+        const sentences = finalText.match(/[^.!?]+[.!?]+/g) || [finalText];
+        const varied = [];
+        for (let i = 0; i < sentences.length; i++) {
+          const current = sentences[i].trim();
+          const words = current.split(/\s+/).length;
+          const next = sentences[i + 1] ? sentences[i + 1].trim() : null;
+          const nextWords = next ? next.split(/\s+/).length : 0;
+
+          if (next && words >= 18 && nextWords <= 6 && Math.random() < 0.5) {
+            varied.push(`${current.replace(/[.!?]$/, "")}, ${next.charAt(0).toLowerCase()}${next.slice(1)}`);
+            i++; // consumir la siguiente
+          } else {
+            varied.push(current);
+          }
+        }
+        finalText = varied.join(" ");
       }
 
-      // Agregar transiciones académicas
+      // 5.3 Conectores naturales del discurso (moderados), en lugar de
+      // plantillas académicas rígidas que delatan escritura de IA.
       if (options.addTransitions !== false) {
-        console.log("  - Agregando transiciones académicas...");
+        console.log("  - Agregando conectores naturales...");
+        const naturalConnectors = [
+          "That said,", "Still,", "Then again,", "In practice,", "On top of that,",
+          "At the same time,", "More often than not,", "For what it is worth,",
+          "To be fair,", "As things stand,"
+        ];
         const sentences = finalText.match(/[^.!?]+[.!?]+/g) || [finalText];
         finalText = sentences
           .map((sentence, index) => {
             if (index === 0) return sentence;
-            if (Math.random() < 0.25) {
-              const transition = this.academicTransitions[
-                Math.floor(Math.random() * this.academicTransitions.length)
+            if (Math.random() < 0.15) {
+              const transition = naturalConnectors[
+                Math.floor(Math.random() * naturalConnectors.length)
               ];
               const trimmed = sentence.trim();
               return transition + " " + trimmed.charAt(0).toLowerCase() + trimmed.slice(1);
@@ -1197,7 +1298,7 @@ app.post("/api/humanize-advanced", async (req, res) => {
 
     const transformed = await humanizer.transformAdvanced(text, options);
     const stats = await humanizer.getStats(text, transformed);
-    const aiDetection = humanizer.detectAILocal(transformed);
+    const aiDetection = await humanizer.detectAILocal(transformed);
 
     res.json({
       result: transformed,
@@ -1241,7 +1342,8 @@ app.post("/api/humanize", async (req, res) => {
     const pipelineResult = await humanizer.humanizeComplete(text, {
       useEmbeddings,
       usePassiveVoice,
-      addTransitions
+      addTransitions,
+      useAI: req.body.useAI === true
     });
 
     if (!pipelineResult.success) {
@@ -1440,7 +1542,7 @@ app.post("/api/detect-ai", async (req, res) => {
       return res.status(400).json({ error: "Se requiere el campo 'text'" });
     }
 
-    const detection = humanizer.detectAILocal(text);
+    const detection = await humanizer.detectAILocal(text);
 
     res.json({
       text: text.substring(0, 100) + "...",

@@ -7,7 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import ProcessProgress from "@/components/ProcessProgress";
 import ResultDisplay from "@/components/ResultDisplay";
 import ooc from "out-of-character";
-import { LocalHumanizer } from '../utils/localHumanizer';
+import { apiUrl, RAPIDAPI_SMODIN_KEY } from "@/lib/config";
 
 const Index = () => {
   const [inputText, setInputText] = useState("");
@@ -37,72 +37,58 @@ const Index = () => {
 
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  const translateText = async (text: string, fromLang: string, toLang: string): Promise<string> => {
-    addToLog(`Traduciendo de ${fromLang} a ${toLang} (usando backend local)`);
-
+  /**
+   * Helper genérico para llamar a los endpoints del backend local.
+   * Elimina la duplicación de código fetch/parseo/manejo de errores.
+   */
+  const callBackend = async (
+    endpoint: string,
+    body: Record<string, unknown>,
+    fallback: string
+  ): Promise<string> => {
     try {
-      const response = await fetch("http://localhost:3001/api/translate", {
+      const response = await fetch(apiUrl(`/api/${endpoint}`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, fromLang, toLang }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const data = await response.json();
-      addToLog(`Traducción exitosa a ${toLang}.`);
+      if (typeof data.result !== "string" || !data.result) {
+        throw new Error(data.error || "Respuesta inesperada del servidor");
+      }
       return data.result;
     } catch (error) {
-      console.error("Error en la traducción:", error);
-      addToLog("⚠️ Traducción fallida, usando texto original");
-      return text;
+      console.error(`Error en ${endpoint}:`, error);
+      addToLog(`⚠️ ${fallback}, usando texto original`);
+      return body.text as string;
     }
+  };
+
+  const translateText = async (text: string, fromLang: string, toLang: string): Promise<string> => {
+    addToLog(`Traduciendo de ${fromLang} a ${toLang} (usando backend local)`);
+    const result = await callBackend("translate", { text, fromLang, toLang }, "Traducción fallida");
+    if (result === text) return result;
+    addToLog(`Traducción exitosa a ${toLang}.`);
+    return result;
   };
 
   const improveWriting = async (text: string): Promise<string> => {
     addToLog("Mejorando la escritura del texto (usando backend local)");
-
-    try {
-      const response = await fetch("http://localhost:3001/api/improve-writing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-      const data = await response.json();
-      addToLog("Escritura mejorada exitosamente.");
-      await delay(300);
-      return data.result;
-    } catch (error) {
-      console.error("Error al mejorar la escritura:", error);
-      addToLog("⚠️ Mejora de escritura fallida, usando texto original");
-      return text;
-    }
+    const result = await callBackend("improve-writing", { text }, "Mejora de escritura fallida");
+    await delay(300);
+    if (result !== text) addToLog("Escritura mejorada exitosamente.");
+    return result;
   };
 
   const paraphraseText = async (text: string): Promise<string> => {
     addToLog("Parafraseando el texto (usando backend local)");
-
-    try {
-      const response = await fetch("http://localhost:3001/api/paraphrase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-      const data = await response.json();
-      addToLog("Parafraseo exitoso.");
-      await delay(300);
-      return data.result;
-    } catch (error) {
-      console.error("Error al parafrasear:", error);
-      addToLog("⚠️ Parafraseo fallido, usando texto original");
-      return text;
-    }
+    const result = await callBackend("paraphrase", { text }, "Parafraseo fallido");
+    await delay(300);
+    if (result !== text) addToLog("Parafraseo exitoso.");
+    return result;
   };
 
   const removeFormatting = async (text: string): Promise<string> => {
@@ -126,11 +112,12 @@ const Index = () => {
   const humanizeText = async (text: string, lang: string = "en"): Promise<string> => {
     addToLog("Humanizando el texto con IA (usando backend local)");
     try {
-      const response = await fetch("http://localhost:3001/api/humanize", {
+      const response = await fetch(apiUrl("/api/humanize"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, lang }),
       });
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       const data = await response.json();
       if (data.result) {
         addToLog("✅ Texto humanizado exitosamente");
@@ -149,7 +136,7 @@ const Index = () => {
     addToLog("Detectando contenido de IA (usando backend local)");
 
     try {
-      const response = await fetch("http://localhost:3001/api/detect-ai", {
+      const response = await fetch(apiUrl("/api/detect-ai"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
@@ -158,8 +145,9 @@ const Index = () => {
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const data = await response.json();
-      addToLog(`✅ Detección de IA completada: ${data.confidence.toFixed(2)}% (${data.isAI ? "Contenido IA" : "Contenido humano"})`);
-      return { isAI: data.isAI, confidence: data.confidence };
+      const confidence = Number(data.confidence) || 0;
+      addToLog(`✅ Detección de IA completada: ${confidence.toFixed(2)}% (${data.isAI ? "Contenido IA" : "Contenido humano"})`);
+      return { isAI: Boolean(data.isAI), confidence };
     } catch (error) {
       console.error("Error en la detección de IA:", error);
       addToLog("⚠️ Detección de IA fallida");
@@ -168,15 +156,18 @@ const Index = () => {
   };
 
   const removeAIDetectionSmodin = async (text: string, language: string = "es"): Promise<string> => {
+    if (!RAPIDAPI_SMODIN_KEY) {
+      addToLog("⚠️ Sin clave VITE_RAPIDAPI_SMODIN_KEY, se omite limpieza con Smodin");
+      return text;
+    }
     addToLog("Limpiando rastros de IA con Smodin (AI Content Detection Remover)");
-    const RAPIDAPI_KEY = "4cc1e4b4camshcb8e9b0028cb710p1e18f2jsnde3df39a0a8e";
     const API_ENDPOINT = "https://ai-content-detection-remover.p.rapidapi.com/recreate";
     try {
       const response = await fetch(API_ENDPOINT, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          'x-rapidapi-key': RAPIDAPI_KEY,
+          'x-rapidapi-key': RAPIDAPI_SMODIN_KEY,
           'x-rapidapi-host': 'ai-content-detection-remover.p.rapidapi.com'
         },
         body: JSON.stringify({

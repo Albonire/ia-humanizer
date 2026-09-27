@@ -421,8 +421,7 @@ ONLY THE REWRITTEN TEXT:
     }
   });
 
-  app.listen(3001, () => {
+  app.listen(process.env.PORT || 3001, () => {
     console.log("✅ Backend de humanización (Hugging Face Phi-4) listo en http://localhost:3001");
     console.log("📝 Usando modelo:", OPENROUTER_MODEL);
-    console.log("🔑 API Key:", OPENROUTER_API_KEY.substring(0, 10) + "...");
   });
