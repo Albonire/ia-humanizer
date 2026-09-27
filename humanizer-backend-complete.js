@@ -544,7 +544,7 @@ app.post("/api/humanize", async (req, res) => {
   }
 });
 
-app.listen(3001, () => {
+app.listen(process.env.PORT || 3001, () => {
   console.log("✅ Backend COMPLETO de humanización listo en http://localhost:3001");
   console.log("📝 Modelo IA: openai/gpt-3.5-turbo");
   console.log("🔧 Todas las transformaciones: LOCAL + IA");
